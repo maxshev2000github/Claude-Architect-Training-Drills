@@ -28,8 +28,13 @@ A scheduled tutor task (`cca-f-daily-tutor`, runs 8am daily) drives study:
 
 `DRILLS.md` is the running log of assigned practice. When working in this repo, check the latest drill at the top of `DRILLS.md` for the current task and its acceptance criteria.
 
+## Repository structure
+
+- `CONTEXT/` — background materials, study notes, and domain summaries relevant to the CCA-F exam.
+- `DRILLS/` — hands-on practice exercises organized by drill. Each drill is self-contained.
+- `REFERENCES/` — official docs, cheat sheets, and reference material for quick lookup during study.
+
 ## Conventions
 
-- Organize practice work by domain — suggested top-level folders as they get created: `agents/`, `mcp/`, `prompting/`, `claude-code/`, `context-reliability/`.
 - Keep each drill self-contained and small; favor clarity over completeness.
 - Update this file as the repo evolves (new folders, tooling, run instructions).

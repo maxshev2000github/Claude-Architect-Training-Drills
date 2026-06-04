@@ -1,0 +1,13 @@
+{
+  "name": "cca-f-exam-simulator",
+  "version": "1.0.0",
+  "description": "CCA-F Exam Simulator — loads questions from CONTEXT/ and runs a timed mock exam",
+  "main": "exam.mjs",
+  "type": "module",
+  "scripts": {
+    "exam": "node exam.mjs",
+    "quiz": "node exam.mjs --questions 10 --no-timer"
+  },
+  "keywords": ["cca-f", "exam", "claude", "anthropic"],
+  "license": "MIT"
+}

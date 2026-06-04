@@ -1,0 +1,67 @@
+[
+  {
+    "domain": 1,
+    "scenario": "You are building a code-review agent that must analyze a large monorepo. The agent decomposes work into per-package sub-agents that run in parallel. One sub-agent encounters a syntax error in a config file and crashes.",
+    "question": "What is the best recovery strategy for the orchestrator?",
+    "options": {
+      "A": "Restart the entire pipeline from scratch",
+      "B": "Log the failure, mark that package as failed, and continue with remaining sub-agents",
+      "C": "Silently ignore the error and report success",
+      "D": "Immediately escalate to a human operator and halt all sub-agents"
+    },
+    "answer": "B",
+    "explanation": "Graceful degradation: the orchestrator should isolate the failure to the affected sub-agent, log it for later review, and let the remaining sub-agents complete. This follows the minimal-blast-radius principle in agentic architectures."
+  },
+  {
+    "domain": 2,
+    "scenario": "Your team uses Claude Code across multiple repositories. Each repo has its own CLAUDE.md and developers also have personal ~/.claude/CLAUDE.md files.",
+    "question": "When a directive in the user-level CLAUDE.md conflicts with the project-level CLAUDE.md, which takes precedence?",
+    "options": {
+      "A": "User-level always wins",
+      "B": "Project-level always wins",
+      "C": "The most recently modified file wins",
+      "D": "Project-level CLAUDE.md takes precedence; user-level provides defaults"
+    },
+    "answer": "D",
+    "explanation": "In the CLAUDE.md hierarchy, project-level files take precedence over user-level files. User-level CLAUDE.md provides defaults that can be overridden by project-specific settings."
+  },
+  {
+    "domain": 3,
+    "scenario": "You need Claude to extract structured product data from unstructured customer reviews and return valid JSON every time.",
+    "question": "Which technique most reliably ensures well-formed JSON output?",
+    "options": {
+      "A": "Ask politely in the system prompt to return JSON",
+      "B": "Use prefilling to start the assistant response with '{' and enforce a JSON schema",
+      "C": "Use a high temperature to increase creativity",
+      "D": "Post-process the output with regex to find JSON-like strings"
+    },
+    "answer": "B",
+    "explanation": "Prefilling the assistant turn with '{' anchors the model into JSON mode. Combining this with a JSON schema definition provides programmatic enforcement of the output structure."
+  },
+  {
+    "domain": 4,
+    "scenario": "You are designing an MCP server that provides database query tools to Claude. The server will be used by multiple clients concurrently.",
+    "question": "Which transport should you choose for a production multi-client deployment?",
+    "options": {
+      "A": "stdio — it is the simplest and most reliable",
+      "B": "SSE (Server-Sent Events) or streamable HTTP — they support multiple concurrent clients",
+      "C": "WebSocket — it has the lowest latency",
+      "D": "Raw TCP sockets for maximum control"
+    },
+    "answer": "B",
+    "explanation": "stdio is 1:1 (one client per process). For multi-client production deployments, SSE or streamable HTTP transport is the correct choice as it supports concurrent connections and is the standard remote MCP transport."
+  },
+  {
+    "domain": 5,
+    "scenario": "Your agentic application has been running a long multi-step task. The conversation is approaching the context window limit and important early instructions are at risk of being lost.",
+    "question": "What is the recommended CALM strategy to handle this?",
+    "options": {
+      "A": "Start a brand new conversation and re-send all messages",
+      "B": "Apply conversation compaction — summarise completed steps into a dense state block and continue",
+      "C": "Increase the model's max token parameter",
+      "D": "Split the conversation into multiple parallel threads"
+    },
+    "answer": "B",
+    "explanation": "The CALM (Context-Aware LLM Management) framework recommends conversation compaction: summarising completed work into a dense state block preserves task continuity while freeing context space for remaining steps."
+  }
+]

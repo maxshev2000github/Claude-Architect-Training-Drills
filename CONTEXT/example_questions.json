@@ -63,5 +63,187 @@
     },
     "answer": "B",
     "explanation": "The CALM (Context-Aware LLM Management) framework recommends conversation compaction: summarising completed work into a dense state block preserves task continuity while freeing context space for remaining steps."
+  },
+  {
+    "domain": 1,
+    "scenario": "You are building an agentic loop that calls Claude's Messages API repeatedly. The agent should continue calling tools until the task is complete, then stop.",
+    "question": "What is the correct way to determine when the agentic loop should terminate?",
+    "options": {
+      "A": "Set a maximum iteration count (e.g., 10 loops) and stop when reached",
+      "B": "Parse the assistant's natural language response for phrases like 'I am done'",
+      "C": "Check the stop_reason field in the API response — 'end_turn' means done, 'tool_use' means continue",
+      "D": "Use a timer and stop after a fixed duration"
+    },
+    "answer": "C",
+    "explanation": "The canonical agentic loop checks stop_reason in the API response. 'tool_use' means Claude wants to call a tool (continue looping), while 'end_turn' means Claude has completed its response. Parsing natural language or using arbitrary iteration caps are anti-patterns."
+  },
+  {
+    "domain": 1,
+    "scenario": "A multi-agent research system uses a coordinator agent that delegates tasks to specialized subagents (search, analyze, synthesize). A developer assumes each subagent automatically inherits the coordinator's full conversation context.",
+    "question": "What is wrong with this assumption?",
+    "options": {
+      "A": "Subagents do inherit context automatically — there is no issue",
+      "B": "Subagents have isolated context; the coordinator must explicitly pass relevant findings to each subagent",
+      "C": "Subagents share context but only within the same API key",
+      "D": "Context inheritance depends on the transport protocol used"
+    },
+    "answer": "B",
+    "explanation": "Subagents do NOT automatically inherit the coordinator's context. Each subagent operates with isolated context. The coordinator must explicitly pass relevant information (task description, findings from other subagents) when spawning or communicating with each subagent."
+  },
+  {
+    "domain": 4,
+    "scenario": "Your MCP server exposes 22 tools to a Claude-based agent. During testing, you notice Claude frequently selects the wrong tool for a given task.",
+    "question": "What is the most likely cause and best fix?",
+    "options": {
+      "A": "Add a routing classifier that pre-selects the tool before Claude sees them",
+      "B": "Reduce the number of tools to 4-5 per agent and improve tool descriptions with input formats, examples, and boundary conditions",
+      "C": "Increase the model's temperature to improve tool selection creativity",
+      "D": "Rename all tools with numeric prefixes so Claude can select by number"
+    },
+    "answer": "B",
+    "explanation": "Research shows that 4-5 tools per agent is optimal. Having 18+ tools significantly degrades selection reliability. The fix is to reduce tool count and write detailed descriptions that include input formats, examples, edge cases, and boundaries — not to add routing classifiers."
+  },
+  {
+    "domain": 4,
+    "scenario": "An MCP tool for querying an inventory database fails due to a temporary network timeout. The error is returned to Claude as a plain string: 'Error: something went wrong'.",
+    "question": "How should the error response be improved?",
+    "options": {
+      "A": "Return a structured error with errorCategory, isRetryable flag, and a human-readable message",
+      "B": "Return an empty result set so Claude thinks the query returned no data",
+      "C": "Suppress the error and let Claude try a different approach on its own",
+      "D": "Include the full stack trace in the error message"
+    },
+    "answer": "A",
+    "explanation": "The CCA-F emphasizes structured error responses with errorCategory (e.g., 'transient', 'validation', 'permission'), an isRetryable flag indicating whether the error is transient or permanent, and a human-readable description. Suppressing errors or returning empty results as success are anti-patterns."
+  },
+  {
+    "domain": 2,
+    "scenario": "Your team wants to enforce a coding standard rule that only applies to test files (*.test.tsx) in a Claude Code project, without affecting other file types.",
+    "question": "What is the correct way to configure this?",
+    "options": {
+      "A": "Add the rule to the project-level CLAUDE.md with a comment saying 'only for test files'",
+      "B": "Create a rule file in .claude/rules/ with YAML frontmatter containing a glob pattern like **/*.test.tsx",
+      "C": "Create a separate CLAUDE.md in every test directory",
+      "D": "Use an environment variable to toggle the rule"
+    },
+    "answer": "B",
+    "explanation": "Claude Code supports path-specific rules via .claude/rules/ directory. Files there can include YAML frontmatter with glob patterns (e.g., **/*.test.tsx) for conditional activation, applying rules only when Claude is working with matching files."
+  },
+  {
+    "domain": 2,
+    "scenario": "You need to integrate Claude Code into a CI/CD pipeline to perform automated code reviews on every pull request. The pipeline runs non-interactively.",
+    "question": "Which Claude Code flags are essential for this integration?",
+    "options": {
+      "A": "Use --interactive mode with --verbose for detailed output",
+      "B": "Use the -p flag for non-interactive mode and --output-format json for structured, parseable output",
+      "C": "Use --daemon mode to keep Claude running between reviews",
+      "D": "Use --batch flag with --parallel for concurrent reviews"
+    },
+    "answer": "B",
+    "explanation": "The -p flag enables non-interactive (headless) mode suitable for CI/CD pipelines. Combined with --output-format json, it produces structured output that can be parsed by downstream pipeline steps. These are the canonical flags for Claude Code CI/CD integration."
+  },
+  {
+    "domain": 3,
+    "scenario": "You are designing a prompt for Claude to classify customer support tickets into categories. Your initial prompt says 'classify the ticket appropriately'. Results are inconsistent.",
+    "question": "What is the best way to improve classification reliability?",
+    "options": {
+      "A": "Increase the temperature to 1.0 for more diverse classifications",
+      "B": "Replace vague instructions with explicit categorical criteria and provide 2-4 few-shot examples showing expected classifications",
+      "C": "Add 'please try harder' to the system prompt",
+      "D": "Use a longer system prompt repeating the instruction multiple times"
+    },
+    "answer": "B",
+    "explanation": "The CCA-F emphasizes that explicit categorical criteria outperform vague guidance. Combined with 2-4 targeted few-shot examples (especially effective for format consistency and ambiguous scenarios), this approach dramatically improves classification reliability."
+  },
+  {
+    "domain": 3,
+    "scenario": "You need to process 10,000 product descriptions through Claude for data extraction. Latency is not a concern — results are needed by tomorrow morning.",
+    "question": "Which API approach offers the best cost-performance tradeoff?",
+    "options": {
+      "A": "Send all requests synchronously in a single-threaded loop",
+      "B": "Use the Message Batches API for up to 50% cost savings with up to 24-hour processing",
+      "C": "Spin up 10,000 parallel API calls simultaneously",
+      "D": "Use streaming mode for each request to get partial results faster"
+    },
+    "answer": "B",
+    "explanation": "The Message Batches API offers up to 50% cost savings with a processing window of up to 24 hours. For latency-tolerant workloads like overnight batch processing, this is the optimal choice. It should NOT be used for real-time or blocking operations."
+  },
+  {
+    "domain": 5,
+    "scenario": "A customer support agent uses progressive summarization to manage long conversations. After summarization, the agent loses track of the customer's order number and refund amount mentioned earlier in the conversation.",
+    "question": "What should be done to prevent this data loss?",
+    "options": {
+      "A": "Disable summarization entirely and keep all messages",
+      "B": "Extract transactional facts (order numbers, amounts, dates) into a persistent 'case facts' block that is preserved outside the summary",
+      "C": "Increase the context window size",
+      "D": "Ask the customer to repeat their order number after each summarization"
+    },
+    "answer": "B",
+    "explanation": "Progressive summarization risks losing specific transactional details. The solution is to extract critical facts (amounts, dates, order numbers, account IDs) into a persistent 'case facts' block that sits outside the summarized content and is always preserved in context."
+  },
+  {
+    "domain": 5,
+    "scenario": "A customer support agent powered by Claude detects negative sentiment in a customer message and automatically escalates to a human agent.",
+    "question": "What is wrong with this escalation design?",
+    "options": {
+      "A": "Nothing — sentiment-based escalation is best practice",
+      "B": "Escalation should be triggered by explicit customer requests, policy gaps, or genuine inability to progress — not by sentiment analysis",
+      "C": "The agent should use self-reported confidence scores instead of sentiment",
+      "D": "Escalation should only happen after 10 failed attempts"
+    },
+    "answer": "B",
+    "explanation": "Sentiment-based escalation is an anti-pattern on the CCA-F exam. Correct escalation triggers are: explicit customer requests to speak with a human, policy gaps the agent cannot resolve, or genuine inability to make progress. Self-reported confidence scores are also an anti-pattern."
+  },
+  {
+    "domain": 1,
+    "scenario": "A financial services company uses a Claude-based agent to process refund requests. The business rule is: refunds over $500 require manager approval. A developer implements this rule in the system prompt.",
+    "question": "What is the architectural concern with this approach?",
+    "options": {
+      "A": "The system prompt is the correct place for all business rules",
+      "B": "Critical business rules like financial thresholds should be enforced via programmatic hooks (e.g., PostToolUse), not prompt instructions, because prompts are not deterministic",
+      "C": "The threshold should be hardcoded in the model's training data",
+      "D": "The rule should be in the user message instead of the system prompt"
+    },
+    "answer": "B",
+    "explanation": "Prompt-based enforcement of critical financial/business rules is an anti-pattern. Prompts are probabilistic and can be circumvented. Deterministic business rules should be enforced via programmatic hooks (e.g., PostToolUse hooks) that check conditions and block/allow actions with certainty."
+  },
+  {
+    "domain": 4,
+    "scenario": "You want Claude to always call a specific tool in the next response — for example, to force it to use a 'validate_input' tool before processing user data.",
+    "question": "Which tool_choice mode should you use?",
+    "options": {
+      "A": "tool_choice: 'auto' — Claude will figure out the right tool",
+      "B": "tool_choice: 'any' — Claude must call some tool but chooses which one",
+      "C": "tool_choice with the specific tool name forced — Claude must call that exact tool",
+      "D": "Do not set tool_choice — the default behavior handles this"
+    },
+    "answer": "C",
+    "explanation": "tool_choice supports three modes: 'auto' (Claude may return text or call a tool), 'any' (Claude must call a tool but picks which one), and forced selection with a specific tool name (Claude must call that exact tool). To guarantee a particular tool is called, use forced selection."
+  },
+  {
+    "domain": 2,
+    "scenario": "A developer wants to create a custom slash command for their Claude Code project that runs in an isolated subagent context to avoid polluting the main conversation.",
+    "question": "How should the custom command be configured to achieve this?",
+    "options": {
+      "A": "Add 'isolated: true' to the command's YAML frontmatter",
+      "B": "Set 'context: fork' in the command definition to run in a forked subagent context",
+      "C": "Create the command in ~/.claude/commands/ instead of .claude/commands/",
+      "D": "Use the --sandbox flag when invoking the command"
+    },
+    "answer": "B",
+    "explanation": "Custom commands/skills in Claude Code support 'context: fork' which runs the command in a forked subagent context, isolating it from the main conversation. This prevents the command's intermediate work from cluttering the primary context."
+  },
+  {
+    "domain": 5,
+    "scenario": "A multi-agent research system synthesizes information from multiple subagents. The final report contains claims but does not track which source each claim came from.",
+    "question": "What reliability pattern should be applied?",
+    "options": {
+      "A": "Add a disclaimer that sources are not tracked",
+      "B": "Maintain claim-source mappings with URLs, excerpts, and publication dates to preserve attribution through synthesis",
+      "C": "Have Claude regenerate the report multiple times and pick the best one",
+      "D": "Use a higher-capability model for better accuracy"
+    },
+    "answer": "B",
+    "explanation": "Information provenance is a key reliability pattern. The system should maintain claim-source mappings that include URLs, relevant excerpts, and publication dates. This preserves attribution through the synthesis process and allows downstream verification of claims."
   }
 ]

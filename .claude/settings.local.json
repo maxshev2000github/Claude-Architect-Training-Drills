@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(node:*)",
+      "WebFetch(domain:tutorialsdojo.com)",
+      "WebFetch(domain:pub.towardsai.net)",
+      "WebFetch(domain:preporato.com)",
+      "WebFetch(domain:certstud.com)",
+      "WebFetch(domain:www.ai.cc)",
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:cloudninjas.ca)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Search the web for the latest CCA-F (Claude Certified Architect - Foundations) exam information. Look for any updates to exam domains, weights, new topics, or sample questions. Then read CONTEXT/example_questions.json and append any new scenario-based MCQs you can create based on what you found. Follow the exact JSON schema already used in that file. Do not remove existing questions. If no new info is found, just report that.",
+            "timeout": 120,
+            "statusMessage": "Updating CCA-F exam questions from web..."
+          }
+        ]
+      }
+    ]
+  }
+}

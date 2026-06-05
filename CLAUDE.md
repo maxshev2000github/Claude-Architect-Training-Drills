@@ -34,7 +34,12 @@ A scheduled tutor task (`cca-f-daily-tutor`, runs 8am daily) drives study:
 - `DRILLS/` — hands-on practice exercises organized by drill. Each drill is self-contained.
 - `REFERENCES/` — official docs, cheat sheets, and reference material for quick lookup during study.
 
+## Custom slash commands
+
+- `/update-exam` — searches the web for the latest CCA-F exam information and appends new scenario-based questions to `CONTEXT/example_questions.json`. Run this at the start of each session to keep the question bank current.
+
 ## Conventions
 
 - Keep each drill self-contained and small; favor clarity over completeness.
+- When opening this project, run `/update-exam` to check for new exam content.
 - Update this file as the repo evolves (new folders, tooling, run instructions).

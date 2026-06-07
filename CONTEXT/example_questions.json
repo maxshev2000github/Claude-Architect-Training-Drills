@@ -245,5 +245,330 @@
     },
     "answer": "B",
     "explanation": "Information provenance is a key reliability pattern. The system should maintain claim-source mappings that include URLs, relevant excerpts, and publication dates. This preserves attribution through the synthesis process and allows downstream verification of claims."
+  },
+  {
+    "domain": 1,
+    "scenario": "You are designing a multi-agent system for a legal document review pipeline. The architect proposes using an orchestrator-worker pattern where the orchestrator dynamically plans which subagents to invoke based on document type. Mid-way through processing, the orchestrator realizes a new document category requires a different analysis approach.",
+    "question": "What agentic pattern best handles this situation?",
+    "options": {
+      "A": "Abort the current run and restart with a new hardcoded plan",
+      "B": "Use dynamic replanning — the orchestrator adjusts its plan mid-execution based on intermediate results",
+      "C": "Queue the unexpected documents for a separate manual review pipeline",
+      "D": "Add all possible document categories to the initial plan to avoid replanning"
+    },
+    "answer": "B",
+    "explanation": "Dynamic replanning is a core agentic pattern where the orchestrator can revise its execution plan mid-run based on intermediate results or unexpected inputs. This is more resilient than static plans and avoids the brittleness of trying to enumerate all possibilities upfront."
+  },
+  {
+    "domain": 1,
+    "scenario": "A developer is building an agentic system using the Claude Agent SDK. They need to run three independent research tasks in parallel to reduce total latency.",
+    "question": "How should parallel execution be achieved in the Claude Agent SDK?",
+    "options": {
+      "A": "Send three separate API requests sequentially and cache the results",
+      "B": "Use multiple Task tool calls in a single response to spawn parallel subagents",
+      "C": "Set a 'parallel: true' flag in the API request body",
+      "D": "Use the Message Batches API to process all three at once"
+    },
+    "answer": "B",
+    "explanation": "In the Claude Agent SDK and Claude Code, parallel execution is achieved by making multiple Task tool calls in a single response. Each task runs as a parallel subagent. The Message Batches API is for cost-optimized batch processing, not real-time parallel execution."
+  },
+  {
+    "domain": 2,
+    "scenario": "A team is onboarding new developers to a Claude Code project. Senior developers have extensive personal ~/.claude/CLAUDE.md configurations. New team members report that Claude Code behaves differently for them compared to senior devs.",
+    "question": "What is the most likely cause of the inconsistency?",
+    "options": {
+      "A": "New developers are using a different version of Claude Code",
+      "B": "User-level CLAUDE.md files are not shared across team members — only project-level CLAUDE.md and .claude/rules/ are version-controlled",
+      "C": "Claude Code randomly varies behavior between users",
+      "D": "The project-level CLAUDE.md is corrupted"
+    },
+    "answer": "B",
+    "explanation": "User-level ~/.claude/CLAUDE.md is personal and not shared via version control. Only project-level .claude/CLAUDE.md and .claude/rules/ files are committed to the repo and shared with all team members. This is a common gotcha — new team members won't receive user-level instructions."
+  },
+  {
+    "domain": 2,
+    "scenario": "An architect is deciding when to use Claude Code's Plan Mode versus direct execution for a large refactoring task that involves changes across 50+ files.",
+    "question": "When is Plan Mode the appropriate choice?",
+    "options": {
+      "A": "Plan Mode should always be used regardless of task size",
+      "B": "Plan Mode is best for large-scale changes and architectural decisions involving many files; direct execution suits single-file fixes",
+      "C": "Plan Mode is only for generating documentation",
+      "D": "Plan Mode should be avoided because it consumes more tokens"
+    },
+    "answer": "B",
+    "explanation": "Plan Mode is designed for large-scale changes (45+ file modifications) and architectural decisions where understanding the full scope before acting is critical. Direct execution is appropriate for single-file fixes and simple, well-scoped changes. Choosing the right mode prevents wasted effort and costly mistakes."
+  },
+  {
+    "domain": 3,
+    "scenario": "You have built a prompt that asks Claude to review its own generated code for bugs in the same conversation turn. The self-review consistently misses obvious issues.",
+    "question": "Why is the self-review underperforming, and how should it be fixed?",
+    "options": {
+      "A": "Increase the temperature for the review step to get more creative analysis",
+      "B": "Same-session self-review is an anti-pattern — use an independent session without the prior reasoning context for unbiased review",
+      "C": "Add 'be very critical' to the review prompt",
+      "D": "Use a smaller, faster model for the review step"
+    },
+    "answer": "B",
+    "explanation": "Same-session self-review is a known anti-pattern because Claude is biased by its own prior reasoning in the same context. The correct approach is to use an independent session (separate API call) that does not include the original generation context, enabling unbiased review."
+  },
+  {
+    "domain": 3,
+    "scenario": "You are using a validation-retry loop where Claude generates JSON output, a validator checks it, and errors are fed back for correction. The loop works well for formatting errors but consistently fails when required fields contain fabricated data.",
+    "question": "What explains this behavior?",
+    "options": {
+      "A": "The validator is misconfigured and should accept fabricated data",
+      "B": "Validation-retry loops are effective for format/syntax mismatches but cannot fix missing information — if the source data lacks a field, retries will not produce it",
+      "C": "More retry iterations would eventually produce correct data",
+      "D": "The temperature should be set to 0 to prevent fabrication"
+    },
+    "answer": "B",
+    "explanation": "Validation-retry loops excel at correcting format mismatches and syntax errors. However, they cannot conjure information that doesn't exist in the source data. When required fields are absent from the input, Claude may fabricate values, and retrying won't fix this. The solution is to handle missing data at the schema level (e.g., making fields optional)."
+  },
+  {
+    "domain": 4,
+    "scenario": "Your team shares MCP server configurations across a Claude Code project. The MCP server requires database credentials that differ per developer.",
+    "question": "How should credentials be managed in the shared MCP configuration?",
+    "options": {
+      "A": "Commit the credentials directly in .mcp.json since it's a private repo",
+      "B": "Use environment variable expansion in .mcp.json for credentials, so each developer sets their own values locally",
+      "C": "Create a separate .mcp.json for each developer and add all to version control",
+      "D": "Store credentials in the CLAUDE.md file"
+    },
+    "answer": "B",
+    "explanation": "MCP server configuration in .mcp.json supports environment variable expansion for credentials. This allows the shared configuration to reference variables (e.g., $DB_PASSWORD) that each developer sets in their local environment, keeping secrets out of version control."
+  },
+  {
+    "domain": 4,
+    "scenario": "A Claude-based agent uses an MCP tool to query a product database. The query returns zero results for a valid search term. The tool returns an empty array with a 200 status.",
+    "question": "How should the tool distinguish this from an access failure?",
+    "options": {
+      "A": "Return an error for empty results so Claude knows something went wrong",
+      "B": "Return empty results silently — Claude will figure out the difference",
+      "C": "Return a structured response that clearly distinguishes 'no matching results found' from error states, including the query that was executed",
+      "D": "Always return at least one placeholder result to avoid confusion"
+    },
+    "answer": "C",
+    "explanation": "Silently returning empty results is an anti-pattern because Claude cannot distinguish 'no data found' from 'access denied' or 'query failed'. The tool should return a structured response that explicitly states the outcome (e.g., resultCount: 0, status: 'success', query: '...') so Claude can make informed decisions."
+  },
+  {
+    "domain": 1,
+    "scenario": "A subagent in a multi-agent research pipeline encounters a permission error when trying to access a restricted API endpoint. It needs to report back to the coordinator.",
+    "question": "What information should the subagent return to the coordinator?",
+    "options": {
+      "A": "A simple 'failed' status flag",
+      "B": "Structured context including failure type, attempted query, any partial results obtained, and suggested alternative approaches",
+      "C": "The raw API error response string",
+      "D": "Nothing — the coordinator should detect the failure via timeout"
+    },
+    "answer": "B",
+    "explanation": "Error propagation in multi-agent systems requires structured context. The subagent should return the failure type (e.g., permission error), what it tried, any partial results it obtained before failure, and suggested alternatives. This gives the coordinator enough information to replan or delegate to another subagent."
+  },
+  {
+    "domain": 5,
+    "scenario": "A multi-agent system aggregates research findings from five subagents into a single report. Two subagents return conflicting data about the same topic — one says market growth is 12% and another says 8%.",
+    "question": "How should the synthesis agent handle this conflict?",
+    "options": {
+      "A": "Average the two numbers and report 10%",
+      "B": "Pick the number from the subagent that responded first",
+      "C": "Annotate both data points with their sources and flag the conflict for the reader, preserving information provenance",
+      "D": "Discard both data points since they conflict"
+    },
+    "answer": "C",
+    "explanation": "When synthesizing conflicting data, the system should preserve information provenance by annotating each claim with its source. Averaging, arbitrary selection, or discarding data all lose information. Flagging conflicts with sources allows downstream consumers to evaluate the discrepancy."
+  },
+  {
+    "domain": 5,
+    "scenario": "You are aggregating outputs from multiple subagents into a single context window for final synthesis. The aggregated content is large and the most critical summary was placed in the middle of the input.",
+    "question": "What is the risk with this arrangement?",
+    "options": {
+      "A": "There is no risk — Claude processes all parts of the context equally",
+      "B": "The 'lost in the middle' effect means information placed in the middle of large inputs may receive less attention; place key summaries at the beginning",
+      "C": "Only the last 1000 tokens are processed",
+      "D": "Middle content is automatically compressed by the API"
+    },
+    "answer": "B",
+    "explanation": "The 'lost in the middle' effect is a known phenomenon where LLMs pay less attention to information in the middle of large inputs compared to the beginning and end. The mitigation is to place the most critical summaries and instructions at the beginning of aggregated inputs."
+  },
+  {
+    "domain": 2,
+    "scenario": "A team wants to restrict which tools a custom slash command can use in their Claude Code project. The command should only be able to read files and search, not edit or execute code.",
+    "question": "How should this restriction be configured?",
+    "options": {
+      "A": "Add instructions in the command prompt saying 'do not use Edit or Bash tools'",
+      "B": "Use the 'allowed-tools' restriction in the command's configuration to whitelist only Read, Grep, and Glob",
+      "C": "Create a separate Claude Code installation with limited tool access",
+      "D": "Set a global environment variable to disable certain tools"
+    },
+    "answer": "B",
+    "explanation": "Custom slash commands in Claude Code support 'allowed-tools' restrictions that programmatically whitelist which tools the command can access. This is a deterministic enforcement mechanism — more reliable than prompt-based instructions which Claude might not follow."
+  },
+  {
+    "domain": 3,
+    "scenario": "You are building a data extraction pipeline that processes invoices. The system needs to extract structured data and you want to guarantee the output conforms to a specific schema with required fields like invoice_number, date, and line_items.",
+    "question": "What is the most reliable way to enforce schema conformance?",
+    "options": {
+      "A": "Describe the schema in natural language in the system prompt",
+      "B": "Use tool_use with a JSON schema definition — this eliminates syntax errors and enforces field presence",
+      "C": "Parse the output with regex and retry if it doesn't match",
+      "D": "Use XML tags to wrap each field in the prompt"
+    },
+    "answer": "B",
+    "explanation": "Using tool_use with a JSON schema definition is the most reliable approach for structured output. It eliminates JSON syntax errors and enforces required fields at the API level. Note that it ensures structural conformance but not semantic correctness — the values themselves may still need validation."
+  },
+  {
+    "domain": 1,
+    "scenario": "An e-commerce company runs a Claude-based order processing agent. During peak holiday traffic, the agent must handle 10x normal volume. The architect is considering scaling strategies.",
+    "question": "Which scaling pattern is most appropriate for the agentic system?",
+    "options": {
+      "A": "Increase the context window size to process more orders per conversation",
+      "B": "Use horizontal scaling with multiple independent agent instances, each handling separate orders with isolated sessions",
+      "C": "Use a single agent with a longer timeout to process all orders sequentially",
+      "D": "Switch to a faster model to process orders more quickly"
+    },
+    "answer": "B",
+    "explanation": "Horizontal scaling with independent agent instances is the correct pattern for handling increased load. Each order gets its own isolated session, preventing cross-contamination and enabling true parallelism. Context window size and model speed don't address throughput scaling."
+  },
+  {
+    "domain": 1,
+    "scenario": "An architect is designing an agentic system that processes customer onboarding requests. Some steps (identity verification, credit check) must complete before others (account creation, welcome email). Other steps like compliance logging can happen independently.",
+    "question": "Which task decomposition strategy should the architect use?",
+    "options": {
+      "A": "Run all steps in parallel and sort the results afterward",
+      "B": "Use prompt chaining for the sequential dependencies and parallel subagents for the independent steps",
+      "C": "Run all steps sequentially to avoid complexity",
+      "D": "Let Claude decide the execution order dynamically at runtime with no constraints"
+    },
+    "answer": "B",
+    "explanation": "Prompt chaining enforces sequential dependencies (identity verification → credit check → account creation), while independent steps like compliance logging can run as parallel subagents. This hybrid approach balances correctness (sequential where needed) with performance (parallel where possible)."
+  },
+  {
+    "domain": 1,
+    "scenario": "A Claude-based agent processes API responses that return timestamps in mixed formats (Unix epoch, ISO 8601, locale strings). Downstream tools expect ISO 8601 only. A developer adds format-conversion instructions to the system prompt.",
+    "question": "What is the better architectural approach?",
+    "options": {
+      "A": "The system prompt approach is correct — Claude handles format conversion well",
+      "B": "Use a PostToolUse hook to programmatically normalize timestamps before Claude processes the data",
+      "C": "Ask the API provider to change their response format",
+      "D": "Add few-shot examples showing each timestamp format conversion"
+    },
+    "answer": "B",
+    "explanation": "PostToolUse hooks intercept tool results before the model processes them, enabling deterministic data transformations like timestamp normalization. Relying on the system prompt for data transformation is unreliable because it's probabilistic. Hooks provide guaranteed, consistent formatting."
+  },
+  {
+    "domain": 1,
+    "scenario": "A multi-agent coding assistant allows subagents to install npm packages and modify CI configuration files without user confirmation. During a routine task, a subagent accidentally removes a critical build step from the CI pipeline.",
+    "question": "What design principle was violated?",
+    "options": {
+      "A": "The subagent should have used a faster model",
+      "B": "Human-in-the-loop approval should be required for high-impact actions like CI/CD modifications and package installations",
+      "C": "The subagent should have run the CI pipeline first to test changes",
+      "D": "All subagent actions should be logged to a database"
+    },
+    "answer": "B",
+    "explanation": "Human-in-the-loop interrupt patterns are essential for high-impact, hard-to-reverse actions. Autonomous permission escalation — allowing agents to modify shared infrastructure (CI/CD, dependencies) without user approval — is an anti-pattern. The system should require explicit confirmation for destructive or externally-visible operations."
+  },
+  {
+    "domain": 2,
+    "scenario": "A developer notices two configuration files in their Claude Code project: .claude/settings.json and .claude/settings.local.json. They want to add a tool permission that only applies to their local development but should not affect other team members.",
+    "question": "Which file should they modify?",
+    "options": {
+      "A": ".claude/settings.json — it's the standard configuration file",
+      "B": ".claude/settings.local.json — it's for personal settings and must not be committed to version control",
+      "C": "Either file works — they have identical behavior",
+      "D": "~/.claude/settings.json — all personal settings belong at user level"
+    },
+    "answer": "B",
+    "explanation": "settings.local.json is for personal, machine-specific settings and must not be committed to version control. settings.json is the shared project-level configuration that applies consistently across all contributors. Local tool permissions that shouldn't affect teammates belong in settings.local.json."
+  },
+  {
+    "domain": 3,
+    "scenario": "You are building a customer-facing chatbot and want to prevent prompt injection attacks where malicious user input attempts to override system instructions or extract sensitive information.",
+    "question": "Which defense strategy is most effective?",
+    "options": {
+      "A": "Tell Claude in the system prompt to ignore any instructions in user messages",
+      "B": "Use input validation to filter keywords like 'ignore previous instructions'",
+      "C": "Separate system instructions from user input using XML tags, validate and sanitize user input at the application boundary, and limit tool permissions to minimum required scope",
+      "D": "Use a lower temperature to make Claude less suggestible"
+    },
+    "answer": "C",
+    "explanation": "Defense-in-depth against prompt injection combines multiple layers: structural separation of system vs. user content (XML tags), input sanitization at the application boundary, and principle of least privilege for tool access. Single-layer defenses like keyword filtering or prompt-based instructions are easily bypassed."
+  },
+  {
+    "domain": 3,
+    "scenario": "You want Claude to solve a complex multi-step reasoning problem — analyzing a business scenario, identifying risks, and recommending mitigations. Initial results show shallow analysis with missed edge cases.",
+    "question": "Which technique would most improve the depth and quality of reasoning?",
+    "options": {
+      "A": "Increase max_tokens to allow longer responses",
+      "B": "Enable extended thinking to give Claude a dedicated reasoning space before generating its final answer",
+      "C": "Add 'think deeply' to the system prompt",
+      "D": "Use a higher temperature for more creative analysis"
+    },
+    "answer": "B",
+    "explanation": "Extended thinking provides Claude with a dedicated internal reasoning space (thinking tokens) before producing the final response. This enables deeper multi-step analysis, better edge case identification, and more thorough reasoning — especially valuable for complex architectural and analytical tasks."
+  },
+  {
+    "domain": 4,
+    "scenario": "Your team is building an MCP server that will be deployed behind a cloud load balancer and accessed by multiple remote Claude Code instances. You need to choose the transport protocol.",
+    "question": "Which transport is recommended for this deployment?",
+    "options": {
+      "A": "stdio — it's the simplest and works everywhere",
+      "B": "SSE (Server-Sent Events) — it's the standard remote transport",
+      "C": "Streamable HTTP — it's the recommended remote transport, supporting stateless load balancing and session management via Mcp-Session-Id headers",
+      "D": "Raw WebSocket connections for bidirectional streaming"
+    },
+    "answer": "C",
+    "explanation": "Streamable HTTP is the current recommended transport for remote MCP servers. It uses a single HTTP endpoint supporting both request-response and streaming, works behind load balancers (stateless-friendly), includes built-in session management via Mcp-Session-Id headers, and supports OAuth 2.1 authentication. SSE is deprecated for new servers; stdio is local-only."
+  },
+  {
+    "domain": 4,
+    "scenario": "An MCP server exposes both tools and resources. A developer is unsure when to use MCP resources versus MCP tools for providing data to Claude.",
+    "question": "What is the correct distinction between MCP resources and MCP tools?",
+    "options": {
+      "A": "Resources and tools are interchangeable — use either for any purpose",
+      "B": "Resources expose read-only content catalogs (files, data) that Claude can browse without side effects; tools perform actions or computations that may have side effects",
+      "C": "Resources are for authentication and tools are for data access",
+      "D": "Resources are faster than tools and should be used whenever possible"
+    },
+    "answer": "B",
+    "explanation": "MCP defines three primitives: resources (read-only content like files and data catalogs), tools (actions/computations with potential side effects), and prompts (reusable prompt templates). Resources reduce unnecessary exploratory tool calls by letting Claude browse available content without executing actions."
+  },
+  {
+    "domain": 5,
+    "scenario": "A Claude-based agent performs extended codebase exploration across a large monorepo. After 30+ tool calls, the agent starts referencing 'typical patterns' instead of specific classes and functions it discovered earlier in the session.",
+    "question": "What is causing this degradation and how should it be addressed?",
+    "options": {
+      "A": "The model is running out of memory — restart with a larger instance",
+      "B": "Context degradation from a saturated context window; use the scratchpad pattern to persist key findings in an external file and delegate verbose exploration to subagents",
+      "C": "The model needs a higher temperature to maintain creativity",
+      "D": "This is expected behavior — models cannot maintain accuracy over long sessions"
+    },
+    "answer": "B",
+    "explanation": "Context degradation occurs when the context window fills with verbose tool outputs, causing the model to lose track of earlier specific findings. The scratchpad pattern — writing key discoveries to a persistent file — preserves facts across context boundaries. Delegating verbose exploration to subagents keeps the coordinator's context lean."
+  },
+  {
+    "domain": 5,
+    "scenario": "A data extraction pipeline processes invoices from 12 different vendor formats. The team reports overall accuracy of 94%. However, one vendor's invoices consistently fail, producing only 60% accuracy.",
+    "question": "What is the reliability concern with the team's evaluation approach?",
+    "options": {
+      "A": "94% accuracy is acceptable — no changes needed",
+      "B": "Aggregate accuracy metrics mask per-category failures; the team should track accuracy by document type and route low-confidence extractions to human review",
+      "C": "The team should retrain the model on the failing vendor's format",
+      "D": "The failing vendor should be removed from the pipeline to improve the overall metric"
+    },
+    "answer": "B",
+    "explanation": "Aggregate accuracy metrics are an anti-pattern because they mask failures in specific categories. The CCA-F emphasizes tracking accuracy by document type (per-vendor in this case) and using field-level confidence scores to route difficult extractions to human review. Removing problematic categories or relying solely on aggregate metrics hides real quality issues."
+  },
+  {
+    "domain": 5,
+    "scenario": "Your application makes repeated API calls with the same large system prompt (8,000 tokens) across hundreds of requests. Each request differs only in the user message. You want to reduce latency and cost.",
+    "question": "Which optimization should you apply?",
+    "options": {
+      "A": "Shorten the system prompt to reduce token count",
+      "B": "Use prompt caching with cache_control breakpoints to cache the static system prompt across requests",
+      "C": "Switch to a smaller model to reduce per-token cost",
+      "D": "Batch all requests into a single API call with all user messages concatenated"
+    },
+    "answer": "B",
+    "explanation": "Prompt caching with cache_control breakpoints allows the static system prompt to be cached and reused across multiple requests. This reduces both latency (cached tokens are processed faster) and cost for requests sharing the same prompt prefix. It's the ideal optimization for high-volume workloads with a stable system prompt."
   }
 ]

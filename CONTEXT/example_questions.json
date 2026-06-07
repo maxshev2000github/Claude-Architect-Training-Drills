@@ -570,5 +570,148 @@
     },
     "answer": "B",
     "explanation": "Prompt caching with cache_control breakpoints allows the static system prompt to be cached and reused across multiple requests. This reduces both latency (cached tokens are processed faster) and cost for requests sharing the same prompt prefix. It's the ideal optimization for high-volume workloads with a stable system prompt."
+  },
+  {
+    "domain": 2,
+    "scenario": "A team wants to enforce that Claude Code always runs a linter after editing TypeScript files, without relying on Claude to remember this instruction. The enforcement must be deterministic.",
+    "question": "What is the correct mechanism to implement this?",
+    "options": {
+      "A": "Add 'always run the linter after editing' to CLAUDE.md",
+      "B": "Define a PostToolUse hook in .claude/settings.json that triggers on Edit tool calls matching *.ts files and runs the linter command",
+      "C": "Create a custom skill that runs the linter",
+      "D": "Use a PreToolUse hook to lint files before they are edited"
+    },
+    "answer": "B",
+    "explanation": "Hooks are system-triggered, deterministic shell commands tied to lifecycle events. A PostToolUse hook fires after the Edit tool completes and can run a linter automatically. Unlike CLAUDE.md instructions (probabilistic) or skills (agent-invoked, not guaranteed), hooks execute deterministically on every matching tool call. PreToolUse fires before the edit, which is too early for linting."
+  },
+  {
+    "domain": 2,
+    "scenario": "An architect needs to decide between implementing a capability as a Claude Code hook versus a custom skill. The capability is fetching the latest deployment status from an internal API when Claude needs it during troubleshooting.",
+    "question": "Should this be a hook or a skill?",
+    "options": {
+      "A": "A hook — because it provides external data",
+      "B": "A skill — because Claude should invoke it based on task relevance, using its reasoning to decide when deployment status is needed",
+      "C": "A hook — because it should run on every tool call for observability",
+      "D": "Neither — this should be hardcoded in the system prompt"
+    },
+    "answer": "B",
+    "explanation": "Skills are agent-driven tools that Claude actively invokes based on task requirements and reasoning. Hooks are system-triggered at lifecycle events regardless of task context. Fetching deployment status is context-dependent (only needed during troubleshooting), so Claude should decide when to invoke it — making it a skill, not a hook."
+  },
+  {
+    "domain": 2,
+    "scenario": "A security-conscious team wants to prevent Claude Code from ever executing 'rm -rf /' or 'DROP TABLE' commands, even if instructed to do so in a prompt. The block must be absolute and not bypassable.",
+    "question": "How should this safety constraint be enforced?",
+    "options": {
+      "A": "Add a strong warning in CLAUDE.md saying 'never run destructive commands'",
+      "B": "Define a PreToolUse hook that inspects Bash tool arguments and exits with code 2 to block matching commands",
+      "C": "Remove Bash from the allowed tools list entirely",
+      "D": "Use a PostToolUse hook to undo destructive commands after execution"
+    },
+    "answer": "B",
+    "explanation": "PreToolUse hooks fire before tool execution and can block operations by exiting with code 2. This provides deterministic, absolute prevention — Claude cannot bypass it because hooks run at the system level, invisible to the agent. CLAUDE.md instructions are probabilistic. Removing Bash entirely is too restrictive. PostToolUse is too late for prevention."
+  },
+  {
+    "domain": 1,
+    "scenario": "A startup wants to minimize API costs for their customer support agent. Most queries (80%) are simple FAQ lookups, while 20% require complex reasoning about account-specific situations. They currently route all queries to Claude Sonnet.",
+    "question": "What architecture pattern would optimize cost without sacrificing quality?",
+    "options": {
+      "A": "Switch all traffic to Claude Haiku since it's cheapest",
+      "B": "Use a model cascade: attempt with Haiku first for simple queries, escalate to Sonnet only when Haiku's response fails validation or indicates low confidence",
+      "C": "Use Opus for all queries to minimize retry costs",
+      "D": "Randomly distribute queries between Haiku and Sonnet to average out costs"
+    },
+    "answer": "B",
+    "explanation": "The model cascade pattern routes queries to the cheapest capable model first (Haiku for simple FAQs), then escalates to a more capable model (Sonnet) only when needed. This combines Haiku's cost efficiency (80% of queries) with Sonnet's capability for complex cases (20%), optimizing the cost-quality tradeoff."
+  },
+  {
+    "domain": 1,
+    "scenario": "An architect is designing a knowledge assistant that needs to answer questions using the company's internal documentation (50,000+ pages). The documents update weekly.",
+    "question": "Which architecture pattern is most appropriate?",
+    "options": {
+      "A": "Include all documents in the system prompt so Claude has full context",
+      "B": "Fine-tune Claude on the company's documents",
+      "C": "Use RAG (Retrieval-Augmented Generation): chunk documents, generate embeddings, store in a vector database, retrieve relevant chunks at query time, and pass them as context to Claude",
+      "D": "Train a separate classification model to answer questions directly"
+    },
+    "answer": "C",
+    "explanation": "RAG is the standard pattern for grounding LLM responses in large, frequently-updated document collections. It chunks documents, generates embeddings, stores them in a vector database, and retrieves relevant chunks at query time. This avoids context window limits (can't fit 50K pages), stays current without retraining, and provides traceable sources."
+  },
+  {
+    "domain": 4,
+    "scenario": "A developer is building an MCP integration and needs to understand the architecture. They are confused about the relationship between MCP hosts, clients, and servers.",
+    "question": "What is the correct MCP architecture hierarchy?",
+    "options": {
+      "A": "Servers connect to hosts, which then connect to clients",
+      "B": "Hosts (like Claude Code) contain MCP clients that connect to MCP servers; each server exposes tools, resources, and prompts",
+      "C": "Clients and servers are the same component with different configurations",
+      "D": "MCP uses a peer-to-peer architecture with no hierarchy"
+    },
+    "answer": "B",
+    "explanation": "MCP follows a host → client → server hierarchy. Hosts (e.g., Claude Code, IDE extensions) contain one or more MCP clients. Each client maintains a connection to an MCP server. Servers expose three primitives: tools (actions with side effects), resources (read-only content), and prompts (reusable templates). Communication uses JSON-RPC over the chosen transport."
+  },
+  {
+    "domain": 4,
+    "scenario": "An MCP server needs to authenticate requests from Claude Code in a production environment deployed with Streamable HTTP transport. The team wants to use industry-standard authentication.",
+    "question": "Which authentication pattern should be used?",
+    "options": {
+      "A": "Basic HTTP authentication with username and password",
+      "B": "API keys passed in query parameters",
+      "C": "OAuth 2.1 — the standard authentication protocol supported by Streamable HTTP transport",
+      "D": "Custom JWT tokens with a proprietary signing algorithm"
+    },
+    "answer": "C",
+    "explanation": "Streamable HTTP transport has built-in support for OAuth 2.1 authentication, which is the industry-standard protocol for production MCP deployments. It provides proper token management, scoped permissions, and refresh flows. Basic auth and query parameter API keys are insecure for production; custom JWT schemes add unnecessary complexity."
+  },
+  {
+    "domain": 3,
+    "scenario": "You are building a multi-turn conversation agent for customer support. After several turns, Claude's responses start drifting from the original task constraints defined in the system prompt.",
+    "question": "What is causing this drift and what is the best mitigation?",
+    "options": {
+      "A": "The system prompt is too short — make it longer",
+      "B": "Multi-turn conversations dilute system prompt influence as user messages accumulate; re-inject key constraints at strategic points in the conversation or use prompt caching to ensure system instructions remain prominent",
+      "C": "Increase temperature to make Claude more attentive",
+      "D": "The system prompt should be moved to the last user message instead"
+    },
+    "answer": "B",
+    "explanation": "In multi-turn conversations, the influence of the system prompt can diminish as the conversation grows longer. Key constraints should be periodically re-injected (e.g., in user-turn prefixes or assistant-turn prefills) to maintain behavioral consistency. Prompt caching ensures system instructions are processed consistently without added latency."
+  },
+  {
+    "domain": 3,
+    "scenario": "A developer is using extended thinking for a complex code analysis task. They want to cache the conversation for follow-up questions but notice thinking blocks behave differently with caching.",
+    "question": "How do thinking blocks interact with prompt caching?",
+    "options": {
+      "A": "Thinking blocks cannot be cached under any circumstances",
+      "B": "Thinking blocks are cached directly using cache_control like any other content",
+      "C": "Thinking blocks cannot have cache_control applied directly, but they are cached alongside other content when they appear in previous assistant turns in the conversation",
+      "D": "Thinking blocks are automatically excluded from all cached conversations"
+    },
+    "answer": "C",
+    "explanation": "Thinking blocks cannot have cache_control applied directly to them, but they CAN be cached when they appear in previous assistant turns as part of a multi-turn conversation. When read from cache, they count as input tokens — creating a tradeoff between extended thinking's reasoning benefits and token costs in cached multi-turn conversations."
+  },
+  {
+    "domain": 5,
+    "scenario": "A production agent processes thousands of requests per hour. The team needs to monitor token usage to stay within budget. They currently only track output tokens.",
+    "question": "What is missing from their token budget management?",
+    "options": {
+      "A": "Output tokens are the only metric that matters for cost",
+      "B": "They should also track input tokens (including cached token reads), thinking tokens from extended thinking, and set per-request token budgets with alerts for anomalous usage spikes",
+      "C": "Token counting is not possible with the Claude API",
+      "D": "They should switch to a flat-rate pricing plan instead"
+    },
+    "answer": "B",
+    "explanation": "Comprehensive token budget management requires tracking input tokens (including cached reads which are cheaper but still billable), output tokens, and thinking tokens from extended thinking. Per-request budgets and anomaly alerts prevent runaway costs from stuck loops or unexpectedly verbose responses. Tracking only output tokens misses the majority of costs."
+  },
+  {
+    "domain": 1,
+    "scenario": "An agentic system follows an observe-think-act-respond cycle. During the 'act' phase, Claude calls a tool that returns an unexpectedly large result (500KB of JSON). This consumes most of the remaining context window.",
+    "question": "What is the best way to prevent this from degrading subsequent iterations of the agentic loop?",
+    "options": {
+      "A": "Increase the context window to the maximum available size",
+      "B": "Use a PostToolUse hook to truncate or summarize large tool results before they enter the context, or delegate the processing to a subagent with fresh context",
+      "C": "Set the tool to always return a maximum of 100 characters",
+      "D": "Skip the observation phase in the next cycle to save context space"
+    },
+    "answer": "B",
+    "explanation": "Large tool results can saturate the context window and degrade subsequent reasoning. Two complementary strategies are: (1) PostToolUse hooks that truncate or summarize oversized results before they enter context, and (2) delegating processing of large results to a subagent that operates with fresh context and returns only a compact summary to the coordinator."
   }
 ]

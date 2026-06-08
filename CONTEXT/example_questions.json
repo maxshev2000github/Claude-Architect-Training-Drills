@@ -713,5 +713,148 @@
     },
     "answer": "B",
     "explanation": "Large tool results can saturate the context window and degrade subsequent reasoning. Two complementary strategies are: (1) PostToolUse hooks that truncate or summarize oversized results before they enter context, and (2) delegating processing of large results to a subagent that operates with fresh context and returns only a compact summary to the coordinator."
+  },
+  {
+    "domain": 1,
+    "scenario": "You are building a customer support agent that handles returns, billing disputes, and account issues. The agent achieves 80%+ first-contact resolution on routine requests, but occasionally encounters a customer threatening legal action over a disputed charge.",
+    "question": "What is the correct escalation behavior for the agent in this situation?",
+    "options": {
+      "A": "Continue handling the dispute using the standard billing resolution flow since the agent has high resolution rates",
+      "B": "Immediately disconnect the conversation and create a ticket for the legal department",
+      "C": "Recognize the legal-threat trigger, preserve full conversation context, and perform a warm handoff to a human agent with the context summary attached",
+      "D": "Offer the customer a full refund to avoid escalation"
+    },
+    "answer": "C",
+    "explanation": "Human escalation is a critical reliability pattern in agentic customer support systems. The agent should recognize situations beyond its authority (legal threats, safety concerns), preserve the full conversation context, and perform a warm handoff — not a cold transfer — so the human agent has complete context. Autonomous resolution of legal matters or blanket refunds are outside the agent's authorized scope."
+  },
+  {
+    "domain": 2,
+    "scenario": "A team wants to enforce different coding conventions depending on the subdirectory. Files under src/frontend/ should follow React best practices, while src/backend/ should follow Python conventions. They want Claude Code to automatically apply the right rules without developers specifying them each time.",
+    "question": "What is the recommended mechanism to achieve directory-scoped rules?",
+    "options": {
+      "A": "Create a single CLAUDE.md at the repo root with conditional if/else logic for each directory",
+      "B": "Place separate CLAUDE.md files in src/frontend/ and src/backend/ — subdirectory CLAUDE.md files are automatically scoped to that directory and its children",
+      "C": "Use environment variables to switch between rule sets at runtime",
+      "D": "Create a PostToolUse hook that checks the file path and injects the appropriate rules"
+    },
+    "answer": "B",
+    "explanation": "Claude Code supports hierarchical CLAUDE.md files. A CLAUDE.md placed in a subdirectory is automatically scoped to that directory and its children. This is the idiomatic way to apply directory-specific conventions — the repo root CLAUDE.md provides defaults, and subdirectory CLAUDE.md files override or extend them for their scope."
+  },
+  {
+    "domain": 2,
+    "scenario": "Your CI/CD pipeline runs Claude Code in a headless environment to perform automated code reviews on every pull request. The pipeline needs to parse Claude's output programmatically and must ensure each run is isolated with no state leaking between reviews.",
+    "question": "Which combination of Claude Code flags achieves both requirements?",
+    "options": {
+      "A": "Use --verbose and pipe stdout to a JSON parser",
+      "B": "Use -p with the review prompt and --output-format json for machine-parseable output; each -p invocation runs in an isolated session by default",
+      "C": "Use --batch-mode and --format=structured to enable CI-friendly output",
+      "D": "Run Claude Code interactively and capture the terminal output with script"
+    },
+    "answer": "B",
+    "explanation": "The -p flag runs Claude Code non-interactively with a prompt, providing natural session isolation since each invocation starts fresh. The --output-format json flag produces structured JSON output that can be parsed programmatically by CI tools. This combination is the standard pattern for CI/CD integration."
+  },
+  {
+    "domain": 3,
+    "scenario": "You need Claude to extract structured data from messy, unstructured legal documents. The documents contain nullable fields (some contracts lack an expiration date), inconsistent formatting, and occasional OCR artifacts. Previous attempts resulted in Claude hallucinating values for missing fields.",
+    "question": "What is the most effective strategy to prevent hallucinated values in extracted fields?",
+    "options": {
+      "A": "Increase temperature to 1.0 so the model explores more options and finds the correct value",
+      "B": "Use a JSON schema with explicit nullable field definitions, instruct Claude to output null for absent data rather than guessing, and add a validation retry loop to catch schema violations",
+      "C": "Use regex post-processing to strip any values that look suspicious",
+      "D": "Limit the output to 50 tokens so there is no room for hallucination"
+    },
+    "answer": "B",
+    "explanation": "For structured data extraction from messy documents, the key defenses against hallucination are: (1) a strict JSON schema that explicitly marks optional fields as nullable, (2) clear instructions telling the model to use null rather than guess when data is absent, and (3) a validation retry loop that catches schema violations and re-prompts. This is the standard pattern for Scenario 6 (Structured Data Extraction) on the CCA-F exam."
+  },
+  {
+    "domain": 4,
+    "scenario": "You are building an MCP tool that queries an external database. Sometimes the database is temporarily unavailable due to maintenance windows. Your current error response simply returns {\"error\": \"Database unavailable\"}, but the calling agent keeps retrying indefinitely, wasting tokens and time.",
+    "question": "How should the MCP tool's error response be structured to enable intelligent retry behavior?",
+    "options": {
+      "A": "Return a longer, more descriptive error message explaining the maintenance schedule",
+      "B": "Include structured error metadata with an errorCategory (e.g., 'service_unavailable') and an isRetryable boolean flag so the agent can decide whether to retry or fail gracefully",
+      "C": "Return an HTTP 503 status code and let the network layer handle retries",
+      "D": "Implement exponential backoff inside the tool itself so the caller never sees the error"
+    },
+    "answer": "B",
+    "explanation": "MCP tool error responses should include structured metadata — particularly errorCategory and isRetryable — so the calling agent can make informed decisions. A non-retryable error (like 'invalid_input') should not trigger retries, while a retryable error (like 'service_unavailable') signals the agent to retry with backoff. Hiding retries inside the tool removes the agent's ability to reason about failures and manage its own token budget."
+  },
+  {
+    "domain": 4,
+    "scenario": "A developer is writing tool descriptions for an MCP server that provides file system operations. One tool is described as: 'This tool reads files. It can read any file on the system.' The developer notices that Claude sometimes calls this tool when it should use the Grep tool for searching content.",
+    "question": "What is the most effective improvement to the tool description?",
+    "options": {
+      "A": "Add a disclaimer: 'Do not use this tool for searching'",
+      "B": "Rename the tool from 'read_file' to 'read_file_not_search' to make the distinction clearer",
+      "C": "Write a precise description that specifies the tool's purpose, expected inputs, output format, and when NOT to use it — e.g., 'Reads the full contents of a single file given an absolute path. Returns file content as text. Use Grep instead when searching for patterns across multiple files.'",
+      "D": "Remove the tool and force all file access through Grep"
+    },
+    "answer": "C",
+    "explanation": "Tool descriptions are the primary mechanism Claude uses to decide which tool to call. Effective descriptions should clearly state: what the tool does, what inputs it expects, what it returns, and importantly, when to use alternative tools instead. Including negative guidance ('Use X instead when...') helps Claude disambiguate between similar tools. Vague descriptions lead to incorrect tool selection."
+  },
+  {
+    "domain": 1,
+    "scenario": "A multi-agent research system has a coordinator that delegates to four specialized subagents: search, analysis, synthesis, and reporting. The coordinator passes the full user query to each subagent. During testing, you notice the synthesis subagent frequently produces summaries that contradict the analysis subagent's findings.",
+    "question": "What is the most likely architectural cause and the best fix?",
+    "options": {
+      "A": "The synthesis subagent's model is too small; upgrade it to a larger model",
+      "B": "The coordinator should pass each subagent only the context it needs — the synthesis subagent should receive the analysis subagent's output as its primary input, not the raw user query alone",
+      "C": "Add a voting mechanism where all subagents vote on the final summary",
+      "D": "Run the synthesis subagent multiple times and pick the best result"
+    },
+    "answer": "B",
+    "explanation": "In multi-agent research systems, context passing between subagents is critical. The synthesis subagent needs the analysis output as its primary input to produce a consistent summary. Passing only the raw user query causes the synthesis agent to independently interpret the data, leading to contradictions. The coordinator's job is to orchestrate the flow of context — each subagent should receive precisely the inputs it needs from prior stages."
+  },
+  {
+    "domain": 5,
+    "scenario": "A long-running agentic session has been operating for hours, processing a large codebase. Claude Code triggers automatic context compaction to stay within the context window. After compaction, the agent forgets a critical architectural decision it made earlier and produces contradictory code.",
+    "question": "What pattern should be used to preserve critical decisions across compaction boundaries?",
+    "options": {
+      "A": "Disable automatic compaction and use a model with a larger context window",
+      "B": "Write critical decisions and state to persistent storage (e.g., a scratchpad file or CLAUDE.md) so they survive compaction and can be re-read when needed",
+      "C": "Repeat all critical decisions in every message to ensure they are always in context",
+      "D": "Set the compaction threshold to the maximum possible value to delay it indefinitely"
+    },
+    "answer": "B",
+    "explanation": "The scratchpad pattern is the recommended approach for preserving critical state across context compaction. By writing important decisions, plans, and state to a persistent file (often called a scratchpad), the agent can re-read this information after compaction. This is more reliable than trying to avoid compaction, which only delays the problem. CLAUDE.md files and dedicated scratchpad files serve as durable memory that survives context window management."
+  },
+  {
+    "domain": 3,
+    "scenario": "You are using Claude to classify customer emails into categories. You want Claude to output its reasoning process before the final classification to improve accuracy, but you also need the final answer in a machine-parseable format.",
+    "question": "Which combination of techniques best achieves both goals?",
+    "options": {
+      "A": "Use temperature 0 and request JSON output only — reasoning would add unnecessary tokens",
+      "B": "Enable extended thinking (thinking blocks) for internal chain-of-thought reasoning, then have Claude output only the structured JSON classification as its visible response",
+      "C": "Ask Claude to output reasoning in XML tags followed by JSON, then parse everything with regex",
+      "D": "Make two separate API calls: one for reasoning and one for classification"
+    },
+    "answer": "B",
+    "explanation": "Extended thinking (thinking blocks) allows Claude to perform chain-of-thought reasoning internally without polluting the structured output. The thinking happens in dedicated thinking blocks that are separate from the response, so the visible output can be clean, parseable JSON. This gives you both improved accuracy from reasoning and a machine-friendly output format in a single API call."
+  },
+  {
+    "domain": 5,
+    "scenario": "Your team is evaluating a Claude-based agent's reliability by running it against a test suite of 50 cases. The agent passes 48 out of 50 cases consistently. The team concludes the agent is production-ready based on these results.",
+    "question": "What is the reliability concern with this evaluation approach?",
+    "options": {
+      "A": "50 test cases is always sufficient for production readiness",
+      "B": "The test suite may not cover edge cases, adversarial inputs, or distribution shifts that occur in production; the team should also test with out-of-distribution inputs, monitor live performance, and establish regression baselines",
+      "C": "The two failing cases should simply be excluded from the test suite",
+      "D": "The agent should be retrained on the failing cases until it achieves 100%"
+    },
+    "answer": "B",
+    "explanation": "A high pass rate on a fixed test suite can create false confidence. Production-readiness evaluation should include: edge cases and adversarial inputs not in the original test set, out-of-distribution inputs that reflect real-world variability, live monitoring and alerting after deployment, and regression baselines to detect degradation over time. A static 96% pass rate does not account for the long tail of production scenarios."
+  },
+  {
+    "domain": 2,
+    "scenario": "A developer wants to create a custom slash command in Claude Code that spawns a subagent to research a topic without polluting the main conversation's context window. The command should fork the context so the subagent operates independently.",
+    "question": "What is the correct way to configure this behavior in a custom slash command?",
+    "options": {
+      "A": "Add 'context: fork' to the slash command's frontmatter so it runs in a forked context that does not affect the main conversation",
+      "B": "Use the --isolate flag when defining the command in .claude/commands/",
+      "C": "Create a separate CLAUDE.md file for the command to read",
+      "D": "Manually clear the conversation history before running the command"
+    },
+    "answer": "A",
+    "explanation": "Custom slash commands (skills) support a 'context: fork' frontmatter directive that causes the command to execute in a forked context. This means the subagent operates with a copy of the current context but its actions and results do not pollute the main conversation window. This is the idiomatic way to run exploratory or research tasks without consuming main context."
   }
 ]

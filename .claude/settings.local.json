@@ -9,7 +9,15 @@
       "WebFetch(domain:certstud.com)",
       "WebFetch(domain:www.ai.cc)",
       "WebFetch(domain:dev.to)",
-      "WebFetch(domain:cloudninjas.ca)"
+      "WebFetch(domain:cloudninjas.ca)",
+      "WebFetch(domain:claudecertifications.com)",
+      "WebFetch(domain:www.claudecertifiedarchitects.com)",
+      "WebFetch(domain:www.mindstudio.ai)",
+      "WebFetch(domain:note.com)",
+      "WebFetch(domain:claudeimplementation.com)",
+      "WebFetch(domain:claudecertified.com)",
+      "WebFetch(domain:certificationpractice.com)",
+      "Bash(python:*)"
     ]
   },
   "hooks": {

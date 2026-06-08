@@ -20,6 +20,8 @@ Pass the CCA-F exam (60 scenario-based MCQs, 120 min, pass at 720/1000). Skills 
 
 ## Daily workflow
 
+`TRAINING_PROGRAM.md` defines the curriculum: a rolling 4-week cycle of 15-min daily sessions (Learn 5 / Drill 7 / Check 3), weighted toward Claude Code & Prompting and MCP & Context. The tutor task follows it day-by-day; cycle position is tracked at the bottom of that file.
+
 A scheduled tutor task (`cca-f-daily-tutor`, runs 8am daily) drives study:
 
 - Generates a fresh mixed Q&A set saved to the Cowork outputs folder (`CCA-F_Daily_<date>.md`).

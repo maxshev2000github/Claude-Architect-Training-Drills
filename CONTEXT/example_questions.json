@@ -856,5 +856,278 @@
     },
     "answer": "A",
     "explanation": "Custom slash commands (skills) support a 'context: fork' frontmatter directive that causes the command to execute in a forked context. This means the subagent operates with a copy of the current context but its actions and results do not pollute the main conversation window. This is the idiomatic way to run exploratory or research tasks without consuming main context."
+  },
+  {
+    "domain": 4,
+    "scenario": "A Salesforce architect built an MCP server that runs as a local subprocess on one developer's machine via Claude Code, reading org credentials from environment variables. The team now wants the same server hosted centrally so a dozen developers and a CI runner can all use it concurrently over the network.",
+    "question": "What transport and auth change is required?",
+    "options": {
+      "A": "Keep stdio but share the same environment variables across all machines",
+      "B": "Migrate to legacy SSE transport, which is purpose-built for multi-developer access",
+      "C": "Migrate from stdio to Streamable HTTP with OAuth 2.1 — stdio is a single-client, local-subprocess transport and cannot serve concurrent remote clients",
+      "D": "Run a separate stdio subprocess per developer behind a shared VPN"
+    },
+    "answer": "C",
+    "explanation": "stdio spawns one server subprocess per client locally, with secrets injected via env vars — it cannot serve multiple concurrent remote clients. For centralized multi-client access the server must move to Streamable HTTP (single /mcp endpoint, session management via Mcp-Session-Id, load-balancer friendly) with OAuth 2.1 for authentication. SSE is the deprecated remote transport and should not be chosen for new deployments."
+  },
+  {
+    "domain": 4,
+    "scenario": "An MCP server exposes a create_lead tool to a Claude agent that processes inbound web forms. Under retry conditions (network blips, the agent re-calling after a timeout), the same web form sometimes produces two or three duplicate Lead records in Salesforce.",
+    "question": "Which tool-design change best prevents the duplicates?",
+    "options": {
+      "A": "Add a note in the tool description telling Claude not to call create_lead twice",
+      "B": "Make the operation idempotent — accept a client-supplied idempotency key (or dedupe on a natural key like email) so repeated calls with the same key return the existing record instead of creating a new one",
+      "C": "Lower the agent's temperature so it is less likely to retry",
+      "D": "Wrap the tool so it silently ignores the second call"
+    },
+    "answer": "B",
+    "explanation": "Tools that create state should be idempotent wherever possible. Accepting an idempotency key (or deduplicating on a natural unique key) means retries are safe: the same key returns the already-created record rather than producing duplicates. Prompt-based instructions are probabilistic and cannot guarantee the behavior; silently ignoring calls hides information the agent needs."
+  },
+  {
+    "domain": 1,
+    "scenario": "A marketing team uses a Claude agent to draft product announcement copy. Single-pass generations are inconsistent: some drafts miss the required call-to-action or exceed the length limit. The team wants higher quality without hand-reviewing every draft.",
+    "question": "Which orchestration pattern is most appropriate?",
+    "options": {
+      "A": "Prompt chaining with more fixed steps",
+      "B": "Evaluator-optimizer: one agent generates the draft, a second critiques it against explicit criteria, and the generator revises until the critique passes or a max-iteration cap is hit",
+      "C": "Hub-and-spoke with ten parallel drafting workers",
+      "D": "Routing: classify the product type then dispatch to a specialized model"
+    },
+    "answer": "B",
+    "explanation": "The evaluator-optimizer pattern fits tasks with clear quality criteria that benefit from iterative refinement: a generator produces output, an evaluator scores it against explicit rules (CTA present, length within limit), and the loop repeats until criteria are met or a max-iteration cap stops it. It pays off precisely when quality is measurable and first drafts are unreliable."
+  },
+  {
+    "domain": 1,
+    "scenario": "A shared support inbox receives a mix of password resets, billing questions, and complex integration troubleshooting. Simple categories have canned resolutions; complex ones need deep reasoning and tool access. The team wants each request handled by the right specialized handler.",
+    "question": "Which pattern should the architect use first?",
+    "options": {
+      "A": "Send every request through the most capable handler to be safe",
+      "B": "Parallelization — fan every request out to all handlers and merge",
+      "C": "Routing — classify the incoming request, then dispatch it to the handler specialized for that category",
+      "D": "Evaluator-optimizer on every request"
+    },
+    "answer": "C",
+    "explanation": "Routing classifies an input and dispatches it to the handler best suited for that category, letting simple requests use cheap canned flows and reserving expensive reasoning/tools for complex ones. Sending everything to the top handler wastes cost; fanning out to all handlers is wasteful and produces conflicting outputs. Use the simplest pattern that fits — here, routing."
+  },
+  {
+    "domain": 2,
+    "scenario": "A project's root CLAUDE.md has grown to 600 lines: coding standards, a full API reference, onboarding docs, and release procedures. Developers notice every session now starts with less available context and higher cost, and Claude sometimes ignores rules buried deep in the file.",
+    "question": "What is the best remediation?",
+    "options": {
+      "A": "Leave it as-is; more context in CLAUDE.md always improves behavior",
+      "B": "Keep CLAUDE.md short with the always-relevant rules and use @path imports (or move reference material to files Claude reads on demand) so detail is pulled in just-in-time rather than loaded every session",
+      "C": "Move the entire file to the user-level ~/.claude/CLAUDE.md",
+      "D": "Split it into one CLAUDE.md per developer"
+    },
+    "answer": "B",
+    "explanation": "CLAUDE.md is injected into every session and consumes context on each turn, so it should stay lean and hold only consistently-relevant guidance. Bulky reference material belongs in separate files pulled in on demand via @path imports or just-in-time reads. This reduces per-session cost and keeps the high-priority rules prominent instead of buried."
+  },
+  {
+    "domain": 3,
+    "scenario": "An email-to-case flow uses Claude to assign a priority (P1/P2/P3/P4) to inbound Salesforce cases. The current prompt says 'set the priority based on urgency'. Results are inconsistent, and the output sometimes contains prose instead of a clean label.",
+    "question": "Which combination most improves reliability and parseability?",
+    "options": {
+      "A": "Raise temperature so the model considers more options",
+      "B": "Replace the vague instruction with explicit per-level criteria, give 3-4 XML-tagged few-shot examples covering edge cases, and constrain the output to an enum (P1|P2|P3|P4) via a tool/JSON schema",
+      "C": "Repeat 'be accurate' several times in the system prompt",
+      "D": "Ask for a long written justification before the label"
+    },
+    "answer": "B",
+    "explanation": "Reliable classification comes from explicit categorical criteria plus 3-4 diverse few-shot examples (ideally covering ambiguous edge cases), with the label space constrained by an enum enforced through a tool/JSON schema. XML tags cleanly separate instructions, examples, and the case text. Temperature and exhortations ('be accurate') do not fix vague criteria or guarantee a parseable label."
+  },
+  {
+    "domain": 3,
+    "scenario": "Claude must return only a JSON object for a downstream parser, but it keeps prefacing the JSON with conversational text like 'Sure, here is the data you requested:' which breaks the parser.",
+    "question": "What is the simplest reliable fix?",
+    "options": {
+      "A": "Add 'do not include any preamble' and hope the model complies",
+      "B": "Prefill the assistant turn so the response starts with '{', which forces the model directly into the JSON object and skips any preamble",
+      "C": "Increase max_tokens so the preamble has room to finish",
+      "D": "Strip the preamble afterward with a regex on every response"
+    },
+    "answer": "B",
+    "explanation": "Prefilling the assistant turn with '{' anchors the model into emitting the JSON object immediately, eliminating conversational preamble at the source. It is more reliable than instructing the model to omit preamble (probabilistic) and cleaner than brittle regex post-processing. Pairing the prefill with a stop sequence or schema further hardens the output."
+  },
+  {
+    "domain": 5,
+    "scenario": "A Claude agent with write access to Salesforce is asked to 'clean up stale opportunities'. Its plan would mass-delete roughly 4,000 Opportunity records across multiple accounts in a single irreversible operation.",
+    "question": "What reliability control should govern this action?",
+    "options": {
+      "A": "Proceed automatically since the user explicitly asked for cleanup",
+      "B": "Lower the agent's temperature before executing the deletion",
+      "C": "Require a human-in-the-loop approval step before the destructive bulk operation, surfacing the exact scope (record count, affected accounts) for confirmation",
+      "D": "Delete the records but log each deletion for later review"
+    },
+    "answer": "C",
+    "explanation": "Destructive, large-blast-radius, irreversible actions are a canonical human-in-the-loop trigger. The agent should pause and present the precise scope (4,000 records, which accounts) for explicit human approval before executing. A vague instruction like 'clean up' does not authorize mass deletion, and after-the-fact logging does not undo an irreversible operation."
+  },
+  {
+    "domain": 1,
+    "scenario": "You are designing a document-processing pipeline that must extract data from PDFs, run sentiment analysis, and generate summaries. Each stage requires logging and validation of intermediate outputs.",
+    "question": "Which architectural pattern best supports injecting cross-cutting concerns like logging and validation between processing stages?",
+    "options": {
+      "A": "A single monolithic prompt that performs all three tasks at once",
+      "B": "Pre/post execution hooks that inject logging and validation while controlling execution flow between stages",
+      "C": "Three completely independent API calls with no shared state",
+      "D": "Hardcoding logging statements inside each prompt's system message"
+    },
+    "answer": "B",
+    "explanation": "Pre/post execution hooks allow cross-cutting concerns (logging, validation) to be injected between processing stages without coupling them to the core logic. This separates concerns cleanly and enables consistent instrumentation across the pipeline."
+  },
+  {
+    "domain": 1,
+    "scenario": "A research agent performs a 15-step financial analysis that consumes approximately 180K tokens. At step 8, the agent needs to transition to a new context window because the current one is nearly exhausted.",
+    "question": "How should the agent preserve state across this context transition?",
+    "options": {
+      "A": "Use a memory tool to serialize state into JSON checkpoints, enabling explicit state tracking across context boundaries",
+      "B": "Rely on implicit summarization by the model to carry forward all relevant details",
+      "C": "Spawn a new agent with only the final conclusion from the first context",
+      "D": "Use git-based checkpointing to save intermediate results to disk"
+    },
+    "answer": "A",
+    "explanation": "Explicit state tracking via JSON checkpoints provides clean, auditable transitions across context boundaries. Implicit summarization risks losing critical details, while spawning a new agent with only the final conclusion loses the reasoning chain. Git-based checkpointing adds unnecessary infrastructure complexity."
+  },
+  {
+    "domain": 1,
+    "scenario": "A long-running research agent must be able to recover from crashes without replaying side effects (e.g., re-sending emails or re-creating database records) that were already completed before the crash.",
+    "question": "What pattern enables safe resumption without re-executing completed side effects?",
+    "options": {
+      "A": "Restart the agent from the beginning each time",
+      "B": "Persist completed tool calls and resume from the last checkpoint, skipping already-executed steps",
+      "C": "Disable all tools after the first turn to prevent re-execution",
+      "D": "Embed tool results directly in the prompt so the model knows what was already done"
+    },
+    "answer": "B",
+    "explanation": "Durable agents persist completed tool calls to avoid re-executing side effects on recovery. This checkpoint-and-resume pattern ensures idempotent recovery — the agent picks up where it left off without duplicating actions that have real-world consequences."
+  },
+  {
+    "domain": 1,
+    "scenario": "You need to process 50 PDF documents, each taking 2-3 seconds to extract data from. Your context window is 200K tokens. You want to maximize throughput while avoiding resource exhaustion.",
+    "question": "Which processing strategy best balances throughput and reliability?",
+    "options": {
+      "A": "Process all 50 sequentially in a single agent with SQLite persistence",
+      "B": "Spawn 10 parallel subagents with disk persistence for intermediate results, processing 5 documents each",
+      "C": "Launch 50 concurrent agents, one per document",
+      "D": "Use a single agent with a tool loop that processes documents one at a time"
+    },
+    "answer": "B",
+    "explanation": "Bounded parallelism (10 subagents) avoids the resource exhaustion risk of 50 concurrent agents while dramatically improving throughput over sequential processing. Disk persistence of intermediate results ensures no work is lost if a subagent fails."
+  },
+  {
+    "domain": 2,
+    "scenario": "A developer needs codebase context that is accessible whether they use Claude Code in the CLI, in VS Code, or in another IDE. They also want real-time IDE-specific features like inline suggestions.",
+    "question": "What is the recommended approach for cross-IDE persistent context?",
+    "options": {
+      "A": "Use global, project, and folder-level CLAUDE.md files for persistent context, supplemented by IDE-specific extensions for real-time features",
+      "B": "Rely solely on IDE extensions, as they handle all context needs",
+      "C": "Use only project-level CLAUDE.md; folder-level and global files are not supported",
+      "D": "Store context in environment variables that each IDE reads on startup"
+    },
+    "answer": "A",
+    "explanation": "CLAUDE.md files (at global, project, and folder levels) provide persistent context that works across all interfaces — CLI and IDEs alike. IDE extensions complement this with real-time features like inline suggestions, but the CLAUDE.md hierarchy is the foundation for portable project context."
+  },
+  {
+    "domain": 2,
+    "scenario": "Your team wants to define path-specific coding rules — for example, all files under src/api/ must use snake_case function names, while files under src/ui/ must use camelCase. These rules should be version-controlled and automatically applied.",
+    "question": "What is the recommended mechanism for path-specific rules in Claude Code?",
+    "options": {
+      "A": "Add conditional logic to the project-level CLAUDE.md using if/else blocks",
+      "B": "Use .claude/rules/ directory with files that have YAML frontmatter specifying glob patterns for path-based applicability",
+      "C": "Create separate CLAUDE.md files in every subdirectory with duplicated rules",
+      "D": "Define path rules in settings.json under a pathRules key"
+    },
+    "answer": "B",
+    "explanation": "The .claude/rules/ directory supports rule files with YAML frontmatter that specifies glob patterns, enabling precise path-scoped rules. This is the dedicated mechanism for path-specific directives, and it integrates cleanly with version control."
+  },
+  {
+    "domain": 3,
+    "scenario": "Your complex code-review task is being cut off because max_tokens is set to 500. You see stop_reason: 'max_tokens' in the API response. You need complete output without wasting tokens on unnecessarily high limits.",
+    "question": "What is the best strategy to resolve the truncation while controlling costs?",
+    "options": {
+      "A": "Incrementally increase max_tokens, monitor stop_reason in each response, and break the task into multiple calls if needed",
+      "B": "Remove the max_tokens limit entirely to ensure the response is never truncated",
+      "C": "Set max_tokens equal to the full context window size",
+      "D": "Ignore stop_reason since streaming mode handles truncation automatically"
+    },
+    "answer": "A",
+    "explanation": "Incrementally adjusting max_tokens while monitoring stop_reason provides a controlled approach to finding the right balance between completeness and cost. Removing the limit entirely wastes tokens, and setting it to the full context window is excessive. The stop_reason field is essential for detecting truncation regardless of streaming mode."
+  },
+  {
+    "domain": 3,
+    "scenario": "You want Claude to perform deep analysis of a complex architectural decision before producing its final recommendation. You set max_thinking_tokens=5000 in the API request.",
+    "question": "How does the max_thinking_tokens parameter affect Claude's behavior?",
+    "options": {
+      "A": "It forces Claude to use exactly 5000 tokens for thinking, no more and no less",
+      "B": "It enables adaptive thinking only, ignoring extended thinking",
+      "C": "The request will be rejected because max_thinking_tokens is not a valid parameter",
+      "D": "It enables extended thinking with a budget of up to 5000 tokens, allowing the model to allocate flexibly within that limit"
+    },
+    "answer": "D",
+    "explanation": "The max_thinking_tokens parameter sets a maximum budget for extended thinking. The model can use fewer tokens if the task doesn't require the full budget, providing flexibility while preventing runaway thinking costs."
+  },
+  {
+    "domain": 4,
+    "scenario": "Your MCP server receives JSON-RPC requests from clients but never sends responses back. Clients time out waiting. The server logs show requests are being received and parsed correctly.",
+    "question": "What is the most likely cause of this issue?",
+    "options": {
+      "A": "The server's event loop is blocked, preventing response processing and sending",
+      "B": "TCP keep-alive settings are misconfigured",
+      "C": "JSON-RPC response IDs are not matching request IDs",
+      "D": "Buffer flow control is preventing data from being flushed"
+    },
+    "answer": "A",
+    "explanation": "A blocked event loop is the most common cause of an MCP server that receives requests but never responds. If the event loop is blocked by synchronous operations, the server cannot process the response and send it back, even though requests are being received. This is a critical debugging priority for async MCP servers."
+  },
+  {
+    "domain": 4,
+    "scenario": "Your MCP server publishes resource_updated notifications to all connected clients whenever any resource changes. As client count grows, notification traffic is causing performance issues.",
+    "question": "What is the recommended approach to reduce unnecessary notification traffic?",
+    "options": {
+      "A": "This is expected MCP behavior and clients should handle the volume",
+      "B": "Implement subscription-based filtering so clients only receive notifications for resources they have subscribed to",
+      "C": "Add client-side filtering to discard irrelevant notifications after receipt",
+      "D": "This is a protocol violation — servers should never send unsolicited notifications"
+    },
+    "answer": "B",
+    "explanation": "Subscription-based notification filtering is the MCP best practice for reducing traffic. Rather than broadcasting every change to every client, the server should track which resources each client has subscribed to and only send relevant notifications. Client-side filtering still wastes bandwidth."
+  },
+  {
+    "domain": 4,
+    "scenario": "Your MCP server serves database query results that are 10+ MB and are requested multiple times within 5-minute windows by different clients. The underlying queries are expensive (3-5 seconds each).",
+    "question": "Which caching strategy is most appropriate for this MCP resource?",
+    "options": {
+      "A": "Implement server-side caching with a TTL matching the expected freshness window",
+      "B": "Send cache hints to clients and let each client manage its own cache",
+      "C": "Use streaming responses to reduce perceived latency instead of caching",
+      "D": "Implement client-side deduplication to avoid redundant requests"
+    },
+    "answer": "A",
+    "explanation": "Server-side caching with TTL is the most efficient approach for expensive, frequently-accessed MCP resources. It avoids re-executing costly queries, serves all clients from the same cache, and the TTL ensures freshness. Client-side caching requires each client to independently manage state and doesn't prevent duplicate expensive queries."
+  },
+  {
+    "domain": 5,
+    "scenario": "Your evaluation pipeline for a Claude-based agent uses a single LLM judge to score outputs on a 1-5 scale. The team notices that scores are inconsistent — the same output receives different scores when evaluated multiple times.",
+    "question": "What is the most effective improvement to evaluation reliability?",
+    "options": {
+      "A": "Increase the judge model's temperature to explore more scoring possibilities",
+      "B": "Use multiple independent judge evaluations and aggregate scores, combined with clear rubric criteria and few-shot scoring examples",
+      "C": "Switch to a smaller, faster model for judging to reduce variance",
+      "D": "Cache the first score for each output and always return the cached result"
+    },
+    "answer": "B",
+    "explanation": "Evaluation reliability improves through multiple independent assessments (reducing variance via aggregation), explicit rubric criteria (reducing ambiguity), and few-shot examples (calibrating the judge). Caching scores masks the reliability problem rather than solving it, and increasing temperature would increase variance."
+  },
+  {
+    "domain": 5,
+    "scenario": "A customer's production agent confidently provides incorrect information to end users. The team asks you to recommend an architectural fix to reduce hallucination risk in the agent's responses.",
+    "question": "Which architectural approach most effectively reduces confident hallucination in a production agent?",
+    "options": {
+      "A": "Lower the temperature to 0 to eliminate all randomness",
+      "B": "Add a disclaimer to every response stating the information may be inaccurate",
+      "C": "Implement RAG with verified knowledge sources and add a verification step where the agent cross-checks claims against retrieved documents before responding",
+      "D": "Increase max_tokens so the agent has more room to self-correct"
+    },
+    "answer": "C",
+    "explanation": "RAG with verified sources grounds the agent's responses in factual data, and a verification step adds a systematic check against hallucination. Temperature=0 does not eliminate hallucination (it only makes outputs more deterministic), disclaimers don't fix the root cause, and more tokens don't inherently improve accuracy."
   }
 ]

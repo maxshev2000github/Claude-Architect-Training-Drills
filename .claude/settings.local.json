@@ -17,7 +17,10 @@
       "WebFetch(domain:claudeimplementation.com)",
       "WebFetch(domain:claudecertified.com)",
       "WebFetch(domain:certificationpractice.com)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "WebFetch(domain:open-exam-prep.com)",
+      "WebFetch(domain:certland.net)",
+      "WebFetch(domain:readroo.st)"
     ]
   },
   "hooks": {

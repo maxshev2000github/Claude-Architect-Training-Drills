@@ -148,9 +148,9 @@ Score by domain. Next cycle: swap one deep-block week to your weakest domain.
 
 | Date | Session | Score | Weakest domain | Note |
 |---|---|---|---|---|
-| | | | | |
+| 2026-06-13 | Wk1 Day 6 quiz (10 mixed) | 9/10 (90%) | D4 — MCP transport | Only miss: SSE vs Streamable HTTP for remote multi-client server. |
 
 ## Integration
 
 - The `cca-f-daily-tutor` scheduled task (8am) should follow this program day-by-day and log drills to `DRILLS.md`.
-- Cycle position: track it here → **Current: Cycle 1, Day 1 (started 2026-06-08)**.
+- Cycle position: track it here → **Current: Cycle 1, Day 6 (started 2026-06-08)**.

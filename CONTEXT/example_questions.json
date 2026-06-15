@@ -1129,5 +1129,161 @@
     },
     "answer": "C",
     "explanation": "RAG with verified sources grounds the agent's responses in factual data, and a verification step adds a systematic check against hallucination. Temperature=0 does not eliminate hallucination (it only makes outputs more deterministic), disclaimers don't fix the root cause, and more tokens don't inherently improve accuracy."
+  },
+  {
+    "domain": 1,
+    "scenario": "You are designing a content moderation pipeline that must classify user-generated posts across 12 categories. Each post needs a category label, a confidence score, and an optional human-review flag. The system processes 50,000 posts per day. Accuracy matters, but cost is a concern.",
+    "question": "Which model selection strategy best balances cost and accuracy for this pipeline?",
+    "options": {
+      "A": "Use Opus for every post to maximize accuracy across all categories",
+      "B": "Use Haiku for initial classification, then route low-confidence results to Sonnet for re-evaluation",
+      "C": "Use Sonnet for all posts as a balanced middle ground",
+      "D": "Randomly distribute posts across all three models to average out costs"
+    },
+    "answer": "B",
+    "explanation": "A model cascade (Haiku → Sonnet) optimizes cost by handling easy classifications cheaply with Haiku while escalating ambiguous cases to Sonnet. At 50K posts/day, using Opus for everything is cost-prohibitive. Random distribution wastes Opus capacity on easy cases. Sonnet-for-all is better than Opus-for-all but still more expensive than a cascade for the majority of straightforward classifications."
+  },
+  {
+    "domain": 1,
+    "scenario": "An architect is choosing between two designs for a document analysis system. Design A uses a single detailed mega-prompt that instructs Claude to extract entities, summarize, classify, and generate a report in one call. Design B uses prompt chaining: extract → summarize → classify → report, with each step as a separate API call.",
+    "question": "What is the primary architectural advantage of Design B (prompt chaining) over Design A (mega-prompt)?",
+    "options": {
+      "A": "Prompt chaining is always faster because it uses fewer tokens total",
+      "B": "Each step can be independently validated, retried, and debugged, and intermediate results can be inspected",
+      "C": "Prompt chaining eliminates the need for system prompts entirely",
+      "D": "A single mega-prompt cannot handle multiple tasks regardless of model capability"
+    },
+    "answer": "B",
+    "explanation": "Prompt chaining decomposes complex tasks into discrete steps, enabling independent validation, retry on failure, and easier debugging. Mega-prompts can handle multiple tasks but make it harder to isolate failures or inspect intermediate results. Chaining typically uses more tokens (not fewer), and system prompts are still used in chained calls."
+  },
+  {
+    "domain": 2,
+    "scenario": "A team wants to enforce that Claude Code always runs 'npm test' after modifying any .ts file in the src/ directory. They want this to happen automatically without requiring manual invocation.",
+    "question": "Which Claude Code mechanism is the correct way to implement this automatic behavior?",
+    "options": {
+      "A": "Add a custom slash command that runs npm test",
+      "B": "Configure a PostToolUse hook that triggers on file edits matching src/**/*.ts",
+      "C": "Add an instruction in CLAUDE.md saying 'always run npm test after editing TypeScript files'",
+      "D": "Create a .claude/rules/testing.md file with test instructions"
+    },
+    "answer": "B",
+    "explanation": "PostToolUse hooks execute shell commands automatically in response to tool invocations (like file edits), and can be scoped to specific file patterns. Slash commands require manual invocation. CLAUDE.md instructions are advisory and not enforced programmatically. Rules files provide context but don't trigger automatic actions."
+  },
+  {
+    "domain": 2,
+    "scenario": "A DevOps engineer wants to use Claude Code in a GitHub Actions workflow to automatically review PRs. The workflow should run non-interactively, output structured JSON results, and never prompt for user input.",
+    "question": "Which combination of Claude Code capabilities enables this CI/CD integration?",
+    "options": {
+      "A": "Use the --interactive flag with a custom CLAUDE.md that says 'do not ask questions'",
+      "B": "Use the -p flag for non-interactive mode with --output-format json for structured output",
+      "C": "Pipe the prompt via stdin and parse stdout text manually",
+      "D": "Run Claude Code in Plan Mode with --auto-approve to skip all confirmations"
+    },
+    "answer": "B",
+    "explanation": "The -p (print) flag runs Claude Code non-interactively with a single prompt, and --output-format json produces structured JSON output suitable for CI/CD parsing. Plan Mode is for interactive planning, not CI automation. While stdin piping works, the -p flag with JSON output is the recommended and more reliable approach for headless CI/CD usage."
+  },
+  {
+    "domain": 3,
+    "scenario": "A developer is building a data extraction pipeline that pulls structured records from legal contracts. Some fields (like 'arbitration_clause' and 'penalty_amount') are not present in every contract. The current schema requires all fields, causing Claude to hallucinate values for missing fields.",
+    "question": "What is the most effective schema design change to prevent hallucinated values for optional fields?",
+    "options": {
+      "A": "Add a system prompt instruction saying 'leave fields blank if not found'",
+      "B": "Make optional fields nullable in the JSON schema and instruct the model to return null when information is absent",
+      "C": "Remove optional fields from the schema entirely",
+      "D": "Add a post-processing step that deletes any field with suspicious values"
+    },
+    "answer": "B",
+    "explanation": "Making fields nullable in the JSON schema gives Claude a valid way to express 'not found' without hallucinating. This is a well-established pattern for data extraction: nullable fields with explicit null values prevent the model from inventing data to satisfy required schema constraints. Removing fields loses the ability to extract them when present. Post-processing is reactive and unreliable."
+  },
+  {
+    "domain": 3,
+    "scenario": "You need Claude to generate a response that starts with a specific XML tag structure for downstream parsing. The response must begin with '<analysis>' without any preamble text.",
+    "question": "Which prompting technique most reliably ensures the response starts with the exact required format?",
+    "options": {
+      "A": "Add 'IMPORTANT: Your response must start with <analysis>' to the system prompt",
+      "B": "Use assistant-turn prefilling by setting the beginning of the assistant message to '<analysis>'",
+      "C": "Provide five few-shot examples that all start with <analysis>",
+      "D": "Set a stop sequence of '</analysis>' to constrain the output"
+    },
+    "answer": "B",
+    "explanation": "Assistant-turn prefilling places text at the start of Claude's response, guaranteeing the output begins with the specified format. This is the most reliable technique for controlling response opening. System prompt instructions can be ignored, few-shot examples suggest but don't guarantee format, and stop sequences control where output ends, not where it begins."
+  },
+  {
+    "domain": 4,
+    "scenario": "A team is building an MCP server that provides both real-time stock prices (requiring API calls) and a company directory (a static dataset loaded at startup). They are deciding how to expose these through MCP.",
+    "question": "What is the correct way to model these two capabilities using MCP primitives?",
+    "options": {
+      "A": "Expose both as MCP tools since they both return data",
+      "B": "Expose the company directory as an MCP resource (read-only data) and stock prices as an MCP tool (requires action/computation)",
+      "C": "Expose both as MCP resources since they both provide information",
+      "D": "Expose the company directory as an MCP prompt template and stock prices as a tool"
+    },
+    "answer": "B",
+    "explanation": "MCP distinguishes between resources (static or semi-static data the model can read) and tools (operations that perform actions or computations). The company directory is a natural resource—pre-loaded, read-only data. Stock prices require an API call each time, making them a tool. Exposing everything as tools wastes the resource abstraction; exposing API calls as resources misrepresents their nature."
+  },
+  {
+    "domain": 4,
+    "scenario": "An MCP tool named 'update_config' accepts a JSON object parameter but frequently receives malformed input from the model. The tool description says: 'Updates configuration settings.'",
+    "question": "What is the most likely cause of the malformed input, and what is the best fix?",
+    "options": {
+      "A": "The model is too small; switch to Opus for all tool calls",
+      "B": "The tool description is too vague—add explicit parameter descriptions with examples and constraints in the JSON schema",
+      "C": "Add client-side validation to reject and re-prompt on every malformed call",
+      "D": "Switch from JSON parameters to plain-text string parameters to avoid formatting issues"
+    },
+    "answer": "B",
+    "explanation": "Vague tool descriptions are the primary cause of malformed tool inputs. Adding explicit parameter descriptions, enum constraints, examples, and clear JSON schema definitions helps the model construct correct inputs. Client-side validation is a useful safety net but doesn't address the root cause. Plain-text parameters lose structure and create worse problems."
+  },
+  {
+    "domain": 5,
+    "scenario": "A long-running coding agent session is approaching the context window limit. The agent has accumulated extensive file exploration results, but also has critical architectural decisions and a list of remaining tasks that must not be lost.",
+    "question": "What is the recommended strategy to handle this context pressure?",
+    "options": {
+      "A": "Restart the session and re-read all files from scratch",
+      "B": "Write critical decisions and remaining tasks to a scratchpad file before compaction occurs, so they persist across context boundaries",
+      "C": "Increase max_tokens to expand the context window",
+      "D": "Delete older messages from the conversation history manually"
+    },
+    "answer": "B",
+    "explanation": "The scratchpad pattern—writing critical state (decisions, task lists, key findings) to a file—ensures information survives compaction. When the context is compressed, the agent can re-read the scratchpad to restore essential state. Restarting loses all progress. max_tokens controls output length, not context window size. Manual message deletion is not a standard API feature."
+  },
+  {
+    "domain": 5,
+    "scenario": "A production chatbot uses prompt caching to reduce costs on repeated system prompt and few-shot example blocks. The team notices that cache hit rates drop significantly whenever they enable extended thinking.",
+    "question": "What explains the drop in cache hit rates when extended thinking is enabled?",
+    "options": {
+      "A": "Extended thinking disables prompt caching entirely as a safety measure",
+      "B": "Thinking blocks introduce variable-length content before the cached turn, which can invalidate the cache prefix match",
+      "C": "Prompt caching only works with Haiku, and extended thinking requires Sonnet or Opus",
+      "D": "The thinking tokens consume the cache storage quota, evicting the cached prompts"
+    },
+    "answer": "B",
+    "explanation": "Prompt caching relies on prefix matching—the cached content must appear as an exact prefix of the new request. Extended thinking inserts variable-length thinking blocks into the conversation, which can shift content positions and break the prefix match required for cache hits. Prompt caching is not disabled by thinking, works across model tiers, and does not have a shared storage quota with thinking tokens."
+  },
+  {
+    "domain": 1,
+    "scenario": "An architect is designing a customer support agent that handles refund requests. Most requests are straightforward (standard policy), but some involve exceptions requiring manager approval. The current design has the agent attempt to handle all requests autonomously.",
+    "question": "What is the correct escalation pattern for this agent?",
+    "options": {
+      "A": "The agent should always escalate to a human for every refund to avoid errors",
+      "B": "The agent should handle standard-policy refunds autonomously and escalate exception cases to a human with a structured summary of the request and why it falls outside policy",
+      "C": "The agent should approve all refunds autonomously to maximize customer satisfaction",
+      "D": "The agent should deny exception requests and only process standard ones"
+    },
+    "answer": "B",
+    "explanation": "Good escalation design separates routine cases (handle autonomously) from edge cases (escalate with context). The escalation should include a structured handoff—summarizing the request, the policy conflict, and relevant customer data—so the human reviewer has full context. Always escalating wastes human time; never escalating risks policy violations."
+  },
+  {
+    "domain": 3,
+    "scenario": "A team is using the Message Batches API to process 10,000 product descriptions for classification. Each request is independent. They want to minimize cost while maintaining classification quality.",
+    "question": "What is the primary advantage of using the Message Batches API over sending individual API requests for this workload?",
+    "options": {
+      "A": "Batches allow using a larger context window per request",
+      "B": "Batches provide 50% cost reduction for asynchronous processing of independent requests",
+      "C": "Batches guarantee faster response times than individual requests",
+      "D": "Batches automatically retry failed requests with a different model"
+    },
+    "answer": "B",
+    "explanation": "The Message Batches API offers a 50% cost discount for workloads that can tolerate asynchronous processing (results within 24 hours). Since the 10,000 classifications are independent and don't need real-time results, batching is ideal. Batches don't increase context windows, don't guarantee faster responses (they trade latency for cost), and don't auto-retry with different models."
   }
 ]

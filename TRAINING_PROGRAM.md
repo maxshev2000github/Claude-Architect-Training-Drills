@@ -153,4 +153,4 @@ Score by domain. Next cycle: swap one deep-block week to your weakest domain.
 ## Integration
 
 - The `cca-f-daily-tutor` scheduled task (8am) should follow this program day-by-day and log drills to `DRILLS.md`.
-- Cycle position: track it here → **Current: Cycle 1, Day 6 (started 2026-06-08)**.
+- Cycle position: track it here → **Current: Cycle 1, Day 10 (started 2026-06-08)**.

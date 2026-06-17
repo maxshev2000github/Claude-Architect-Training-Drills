@@ -1285,5 +1285,135 @@
     },
     "answer": "B",
     "explanation": "The Message Batches API offers a 50% cost discount for workloads that can tolerate asynchronous processing (results within 24 hours). Since the 10,000 classifications are independent and don't need real-time results, batching is ideal. Batches don't increase context windows, don't guarantee faster responses (they trade latency for cost), and don't auto-retry with different models."
+  },
+  {
+    "domain": 1,
+    "scenario": "A multi-agent customer support system uses a coordinator that delegates to specialist subagents. The architect must assign models to each role: a triage classifier, a policy-lookup agent, and a complex dispute resolution agent that reasons about edge cases.",
+    "question": "Which model assignment best balances cost and capability across these roles?",
+    "options": {
+      "A": "Use Opus for all three roles to maximize quality uniformly",
+      "B": "Haiku for the triage classifier (fast, cheap classification), Sonnet for policy lookup (balanced reasoning), and Opus for dispute resolution (deep multi-step reasoning on edge cases)",
+      "C": "Sonnet for all roles as a safe middle ground",
+      "D": "Use Haiku for all roles and add more retry loops to compensate for quality"
+    },
+    "answer": "B",
+    "explanation": "Model selection should match capability to task complexity. Haiku excels at fast, low-cost classification (triage). Sonnet provides balanced reasoning for mid-complexity tasks (policy lookup). Opus is reserved for tasks requiring deep multi-step reasoning (dispute resolution with edge cases). Using the most capable model everywhere wastes budget; using the cheapest everywhere sacrifices quality on hard tasks."
+  },
+  {
+    "domain": 2,
+    "scenario": "A developer wants to create a reusable skill in Claude Code that performs security audits. The skill should run in an isolated context, only have access to Read and Grep tools, and be invocable by teammates via a slash command.",
+    "question": "Where should the skill be defined and what configuration is needed?",
+    "options": {
+      "A": "Create a file in .claude/commands/ with 'context: fork' and 'allowed-tools: Read, Grep' in its YAML frontmatter",
+      "B": "Add the skill to CLAUDE.md with inline tool restrictions",
+      "C": "Create a file in ~/.claude/commands/ with no special frontmatter",
+      "D": "Define the skill in settings.json under a 'skills' key"
+    },
+    "answer": "A",
+    "explanation": "Custom skills/commands are defined as files in .claude/commands/ (project-level, version-controlled). YAML frontmatter supports 'context: fork' for isolated execution and 'allowed-tools' to restrict which tools the skill can use. User-level ~/.claude/commands/ works but is not shared with teammates. CLAUDE.md and settings.json do not support skill definitions."
+  },
+  {
+    "domain": 2,
+    "scenario": "A team lead wants to configure Claude Code so that junior developers cannot run Bash commands or edit files outside the src/ directory, while senior developers have full access. Both groups work on the same repo.",
+    "question": "How should this permission differentiation be implemented?",
+    "options": {
+      "A": "Create two different CLAUDE.md files and tell each group which one to use",
+      "B": "Use .claude/settings.local.json on each developer's machine to configure their personal permission levels, since this file is not committed to version control",
+      "C": "Define permission levels in the project-level settings.json with role-based access control",
+      "D": "Create PreToolUse hooks that check the developer's username before allowing tool execution"
+    },
+    "answer": "B",
+    "explanation": "settings.local.json is the correct mechanism for per-developer configuration that should not be shared via version control. Each developer's machine has its own settings.local.json with appropriate permission levels. Project-level settings.json applies to everyone equally. CLAUDE.md instructions are advisory, not enforced. While hooks could work, settings.local.json is the idiomatic approach for personal permission configuration."
+  },
+  {
+    "domain": 3,
+    "scenario": "You need Claude to generate a product description that ends with a specific closing tag '</product>' and nothing after it. Without constraints, Claude sometimes appends follow-up commentary after the closing tag.",
+    "question": "Which technique most reliably ensures the output stops immediately after the closing tag?",
+    "options": {
+      "A": "Add 'do not write anything after </product>' to the system prompt",
+      "B": "Set a stop sequence of '</product>' so the API terminates generation immediately when that string is produced",
+      "C": "Set max_tokens to a value that cuts off after the expected tag position",
+      "D": "Use a low temperature to reduce verbosity"
+    },
+    "answer": "B",
+    "explanation": "Stop sequences cause the API to halt generation as soon as the specified string is produced. This is a deterministic mechanism — more reliable than prompt instructions (probabilistic) or max_tokens (position-dependent). Stop sequences are ideal for controlling where output ends, while prefilling controls where it begins."
+  },
+  {
+    "domain": 3,
+    "scenario": "You are designing a complex prompt that includes system instructions, a document to analyze, few-shot examples, and the user's question. The prompt is getting difficult to maintain and Claude occasionally confuses the document content with the instructions.",
+    "question": "What is the best structural technique to prevent this confusion?",
+    "options": {
+      "A": "Use numbered sections with headers like '1. Instructions' and '2. Document'",
+      "B": "Use XML tags to clearly delimit each section (e.g., <instructions>, <document>, <examples>, <query>) so Claude can unambiguously identify the role of each content block",
+      "C": "Put each section in a separate API call and chain the results",
+      "D": "Use triple backticks to wrap each section"
+    },
+    "answer": "B",
+    "explanation": "XML tags provide unambiguous structural delimiters that Claude is trained to respect. Tags like <instructions>, <document>, <examples>, and <query> clearly separate the role of each content block, preventing the model from confusing document content with instructions. This is the standard CCA-F technique for prompt organization. Numbered headers and backticks are less precise. Chaining adds unnecessary latency and complexity."
+  },
+  {
+    "domain": 4,
+    "scenario": "An MCP server exposes reusable prompt templates for common workflows — like 'summarize-for-executive' and 'extract-action-items' — that combine specific instructions with placeholders for user-provided content.",
+    "question": "Which MCP primitive is the correct way to expose these templates?",
+    "options": {
+      "A": "MCP tools with the template text hardcoded in the tool description",
+      "B": "MCP resources that return the template text as static content",
+      "C": "MCP prompts — the dedicated primitive for reusable, parameterized prompt templates that users or clients can discover and invoke",
+      "D": "Custom HTTP endpoints outside the MCP protocol"
+    },
+    "answer": "C",
+    "explanation": "MCP defines three primitives: tools (actions with side effects), resources (read-only data), and prompts (reusable prompt templates). Prompts are the dedicated primitive for parameterized templates that combine instructions with user-provided arguments. Exposing templates as tools misuses the tool primitive; resources are for data, not interactive templates. Custom endpoints bypass MCP's discoverability."
+  },
+  {
+    "domain": 4,
+    "scenario": "A team wants to share MCP server configurations across their Claude Code project. They need to specify which servers to connect to, their transport settings, and environment variable references for credentials — all in version control.",
+    "question": "What is the standard mechanism for project-level MCP server configuration in Claude Code?",
+    "options": {
+      "A": "Define MCP servers in the project-level CLAUDE.md file",
+      "B": "Use a .mcp.json file at the project root that declares server names, transport types (stdio or HTTP), command/URL settings, and environment variable references for credentials",
+      "C": "Configure MCP servers in settings.json under an 'mcp' key",
+      "D": "Create individual config files per MCP server in a .claude/mcp/ directory"
+    },
+    "answer": "B",
+    "explanation": ".mcp.json is the standard project-level configuration file for MCP servers in Claude Code. It declares server entries with their transport type, command (for stdio) or URL (for HTTP), arguments, and environment variable references for sensitive values. This file is committed to version control so all team members share the same server configuration."
+  },
+  {
+    "domain": 5,
+    "scenario": "A production Claude agent makes API calls that occasionally fail due to rate limits or transient network errors. The current implementation retries immediately on any error, which sometimes triggers more rate limit errors.",
+    "question": "What is the recommended retry strategy for transient API failures?",
+    "options": {
+      "A": "Retry immediately up to 10 times — persistence overcomes transient failures",
+      "B": "Implement exponential backoff with jitter, distinguish between retryable errors (rate limits, 5xx) and non-retryable errors (4xx validation), and set a maximum retry count",
+      "C": "Never retry — fail fast and surface the error to the user immediately",
+      "D": "Add a fixed 60-second delay between all retries regardless of error type"
+    },
+    "answer": "B",
+    "explanation": "Exponential backoff with jitter prevents retry storms that worsen rate limiting. Distinguishing retryable (transient) from non-retryable (permanent) errors avoids wasting time on errors that won't resolve with retries. A maximum retry count prevents infinite loops. Immediate retries amplify rate limit pressure, fixed delays waste time on fast-recovering errors, and never retrying sacrifices availability unnecessarily."
+  },
+  {
+    "domain": 5,
+    "scenario": "A customer-facing Claude agent occasionally generates responses that contain profanity or off-topic content. The team wants a systematic architectural approach to prevent harmful outputs without relying solely on prompt instructions.",
+    "question": "Which architectural pattern best addresses this concern?",
+    "options": {
+      "A": "Add 'never use profanity' to the system prompt and trust the model to comply",
+      "B": "Implement input and output guardrails — validate user inputs before they reach the model and screen model outputs before they reach the user, using a combination of classifiers and rule-based filters",
+      "C": "Lower the temperature to 0 to minimize unpredictable outputs",
+      "D": "Use a smaller model that is less likely to generate creative content"
+    },
+    "answer": "B",
+    "explanation": "Input/output guardrails provide a systematic, defense-in-depth approach to content safety. Input guardrails screen and sanitize user messages before processing. Output guardrails check model responses against safety classifiers and rule-based filters before delivery. This is more reliable than prompt-only defenses (probabilistic), temperature tuning (doesn't prevent harmful content), or model downgrades (reduce capability without guaranteeing safety)."
+  },
+  {
+    "domain": 1,
+    "scenario": "A multi-turn customer support agent needs to track the customer's current issue, previous actions taken, and pending next steps across many conversation turns. After 20+ turns, the agent loses track of what has already been tried and suggests repeating actions.",
+    "question": "What pattern should be used to maintain reliable session state across a long multi-turn agentic interaction?",
+    "options": {
+      "A": "Rely on the conversation history — the model can read back through all previous turns",
+      "B": "Maintain an explicit session state object (tracking current issue, actions taken, pending steps) that is updated after each turn and injected into the next prompt as structured context",
+      "C": "Summarize the conversation every 5 turns and replace the history with the summary",
+      "D": "Use a separate database to log every message and query it before each response"
+    },
+    "answer": "B",
+    "explanation": "Explicit session state management — maintaining a structured object with current issue, completed actions, and pending steps — provides reliable tracking across long conversations. The state object is updated after each turn and injected as structured context, preventing the agent from losing track of progress. Relying on raw conversation history degrades as context grows. Periodic summarization risks losing action-level detail. Full database querying adds latency without structured reasoning support."
   }
 ]

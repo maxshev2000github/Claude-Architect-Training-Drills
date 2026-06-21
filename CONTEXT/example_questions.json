@@ -1415,5 +1415,135 @@
     },
     "answer": "B",
     "explanation": "Explicit session state management — maintaining a structured object with current issue, completed actions, and pending steps — provides reliable tracking across long conversations. The state object is updated after each turn and injected as structured context, preventing the agent from losing track of progress. Relying on raw conversation history degrades as context grows. Periodic summarization risks losing action-level detail. Full database querying adds latency without structured reasoning support."
+  },
+  {
+    "domain": 1,
+    "scenario": "The CCA-F exam draws from a pool of six predefined scenarios, but each exam instance only presents four of them. A candidate is preparing and wants to allocate study time efficiently across the scenarios.",
+    "question": "Which of the following is a correct list of the six CCA-F exam scenarios?",
+    "options": {
+      "A": "Customer Support Agent, Claude Code Team Setup, Multi-Agent Research System, Developer Productivity Tools, Claude Code in CI/CD, Structured Data Extraction",
+      "B": "Customer Support Agent, RAG Pipeline, Multi-Agent Research System, API Gateway, Claude Code in CI/CD, Structured Data Extraction",
+      "C": "Chatbot Design, Claude Code Team Setup, Multi-Agent Research System, Developer Productivity Tools, Fine-Tuning Pipeline, Structured Data Extraction",
+      "D": "Customer Support Agent, Claude Code Team Setup, Embedding Pipeline, Developer Productivity Tools, Claude Code in CI/CD, Model Training"
+    },
+    "answer": "A",
+    "explanation": "The CCA-F exam uses six predefined scenarios, of which four are randomly selected per exam: (1) Customer Support Agent, (2) Claude Code Team Setup, (3) Multi-Agent Research System, (4) Developer Productivity Tools, (5) Claude Code in CI/CD, and (6) Structured Data Extraction. Candidates should prepare for all six since they cannot predict which four will appear."
+  },
+  {
+    "domain": 4,
+    "scenario": "A team is migrating an existing MCP server from SSE (Server-Sent Events) transport to a newer protocol. The server is deployed behind a cloud load balancer and serves multiple concurrent clients.",
+    "question": "Why is SSE being deprecated in favor of Streamable HTTP for new MCP server deployments?",
+    "options": {
+      "A": "SSE is slower than Streamable HTTP due to encoding overhead",
+      "B": "SSE requires two separate endpoints (one for sending, one for receiving), while Streamable HTTP uses a single /mcp endpoint, simplifies load balancing with stateless design, and includes built-in session management via Mcp-Session-Id headers",
+      "C": "SSE does not support JSON-RPC, which is required by MCP",
+      "D": "SSE cannot handle more than 10 concurrent connections per server"
+    },
+    "answer": "B",
+    "explanation": "SSE transport requires separate endpoints for client-to-server and server-to-client communication, complicating load balancer configuration. Streamable HTTP consolidates to a single /mcp endpoint, supports stateless request-response patterns (load-balancer friendly), and includes Mcp-Session-Id headers for session management. As of MCP 2025-05, Streamable HTTP is the recommended remote transport and SSE is deprecated for new servers."
+  },
+  {
+    "domain": 4,
+    "scenario": "An MCP server deployed with Streamable HTTP transport serves multiple concurrent clients behind a load balancer. The server needs to maintain per-client state (e.g., active subscriptions and cursor positions) across requests that may land on different backend instances.",
+    "question": "How does the MCP protocol support session continuity in this environment?",
+    "options": {
+      "A": "MCP does not support sessions — each request is fully independent",
+      "B": "The server assigns an Mcp-Session-Id header on the first response, and the client includes it in subsequent requests, allowing any backend instance to look up session state from shared storage",
+      "C": "Sticky sessions at the load balancer level are the only supported mechanism",
+      "D": "The client embeds full session state in every request body"
+    },
+    "answer": "B",
+    "explanation": "Streamable HTTP transport includes built-in session management via the Mcp-Session-Id header. The server generates a session ID on initialization and returns it in the response header. The client includes this ID in all subsequent requests. This allows stateless load balancing — any backend instance can serve any request by looking up the session ID in shared storage (e.g., Redis). Sticky sessions are not required."
+  },
+  {
+    "domain": 1,
+    "scenario": "A developer is building a Claude-based agent using the Claude Agent SDK. The agent needs to hand off a conversation from a general-purpose triage agent to a specialized billing agent mid-conversation, preserving the conversation context.",
+    "question": "How should agent handoffs be implemented in a multi-agent system?",
+    "options": {
+      "A": "Start a completely new conversation with the billing agent and re-send all messages",
+      "B": "The triage agent returns a structured handoff signal with the target agent identifier and a context summary, and the orchestrator routes the conversation to the billing agent with the relevant context attached",
+      "C": "Both agents run simultaneously and the user picks which response to accept",
+      "D": "The triage agent modifies its own system prompt to behave like the billing agent"
+    },
+    "answer": "B",
+    "explanation": "Agent handoffs in multi-agent systems use structured signals: the current agent returns a handoff indicator (target agent ID + context summary), and the orchestrator routes to the target agent with relevant context. This preserves conversation continuity without re-sending all messages. Having agents modify their own prompts defeats the purpose of specialization, and running both simultaneously wastes resources."
+  },
+  {
+    "domain": 4,
+    "scenario": "During MCP server initialization, the client and server exchange capabilities to determine which protocol features each side supports. A developer skips this negotiation and immediately starts sending tool/list requests.",
+    "question": "What will likely happen?",
+    "options": {
+      "A": "The requests will succeed because capability negotiation is optional",
+      "B": "The server may reject requests or behave unpredictably because the MCP protocol requires an initialize handshake where client and server exchange supported capabilities before any other requests",
+      "C": "The client will automatically fall back to a default capability set",
+      "D": "Only tool requests will fail; resource requests will work without initialization"
+    },
+    "answer": "B",
+    "explanation": "MCP requires an initialization handshake (initialize request/response) before any other protocol messages. During this exchange, the client declares its capabilities (e.g., roots support, sampling support) and the server declares its capabilities (e.g., tools, resources, prompts). Skipping initialization violates the protocol and will cause the server to reject subsequent requests or behave unpredictably."
+  },
+  {
+    "domain": 2,
+    "scenario": "A developer is troubleshooting why their Claude Code custom slash command's intermediate tool calls and verbose output are cluttering the main conversation, making it hard to see the final result.",
+    "question": "What configuration change would isolate the command's execution from the main conversation?",
+    "options": {
+      "A": "Add 'verbose: false' to the command's YAML frontmatter",
+      "B": "Add 'context: fork' to the command's YAML frontmatter so it runs in a forked subagent context, returning only the final result to the main conversation",
+      "C": "Move the command from .claude/commands/ to .claude/background/",
+      "D": "Wrap the command output in <hidden> XML tags"
+    },
+    "answer": "B",
+    "explanation": "The 'context: fork' frontmatter directive causes the command to execute in a forked context — a separate subagent that inherits the current context but operates independently. Only the final result is returned to the main conversation, keeping intermediate tool calls and verbose output isolated. This is the standard mechanism for clean command output."
+  },
+  {
+    "domain": 1,
+    "scenario": "An architect is designing a pipeline where Claude generates marketing copy, then a separate evaluation step checks the copy against brand guidelines. If it fails, Claude revises. This cycle repeats until the copy passes or a maximum of 3 iterations is reached.",
+    "question": "What is the name of this agentic pattern?",
+    "options": {
+      "A": "Prompt chaining",
+      "B": "Evaluator-optimizer loop",
+      "C": "Routing pattern",
+      "D": "Fan-out/fan-in parallelization"
+    },
+    "answer": "B",
+    "explanation": "The evaluator-optimizer pattern uses two roles: a generator that produces output and an evaluator that scores it against criteria. The loop iterates until quality criteria are met or a max-iteration cap is reached. Prompt chaining is a linear sequence without feedback loops. Routing dispatches to different handlers. Fan-out runs tasks in parallel. The iterative generate-evaluate-revise cycle with a termination condition defines the evaluator-optimizer."
+  },
+  {
+    "domain": 5,
+    "scenario": "A team deploys a Claude agent that answers customer questions using a knowledge base. They measure accuracy using only automated tests with known question-answer pairs. After deployment, customers report frequent incorrect answers on questions not in the test set.",
+    "question": "What evaluation gap caused this production quality issue?",
+    "options": {
+      "A": "The test set was too large, causing overfitting of the evaluation",
+      "B": "The evaluation lacked out-of-distribution testing and live monitoring — fixed test suites do not capture the full variability of real-world inputs, and production performance must be continuously monitored",
+      "C": "Automated tests are inherently unreliable and should never be used",
+      "D": "The knowledge base was too small to cover all possible questions"
+    },
+    "answer": "B",
+    "explanation": "Fixed test suites create false confidence by only covering known scenarios. Production-ready evaluation requires: out-of-distribution test cases that simulate unexpected real-world inputs, ongoing live monitoring with alerting for accuracy degradation, and regression baselines. The CCA-F emphasizes that static evaluations alone are insufficient — continuous production monitoring is essential for reliability."
+  },
+  {
+    "domain": 3,
+    "scenario": "A developer wants to extract data from 500 customer feedback forms using Claude. The forms are identical in structure, results are needed by end of day, and cost is a primary concern. Real-time processing is not required.",
+    "question": "Which API approach should the developer use?",
+    "options": {
+      "A": "Send all 500 requests synchronously in a loop for simplicity",
+      "B": "Use streaming mode for each request to get results faster",
+      "C": "Use the Message Batches API to submit all 500 requests as a batch for up to 50% cost savings",
+      "D": "Use extended thinking on each request to improve extraction quality"
+    },
+    "answer": "C",
+    "explanation": "The Message Batches API is designed for exactly this use case: large volumes of independent, latency-tolerant requests. It provides up to 50% cost savings with results delivered within 24 hours. Since the forms are identical in structure and results aren't needed in real-time, batch processing is optimal. Synchronous loops waste time, streaming doesn't reduce cost, and extended thinking adds cost without addressing the batch processing need."
+  },
+  {
+    "domain": 5,
+    "scenario": "A Claude-based coding agent uses extended thinking for complex debugging tasks. The team notices that token costs have increased significantly compared to non-thinking mode, even though cached prompts are being reused.",
+    "question": "Why do costs increase when extended thinking is used with prompt caching?",
+    "options": {
+      "A": "Extended thinking disables prompt caching, so all tokens are billed at full price",
+      "B": "Thinking tokens are billed as output tokens (which are more expensive than input tokens), and when thinking blocks from previous turns are cached and read back, they count as additional input tokens — creating a compounding cost effect in multi-turn conversations",
+      "C": "Extended thinking doubles the context window size, doubling all token costs",
+      "D": "Cached thinking tokens are billed at 3x the normal rate as a premium feature"
+    },
+    "answer": "B",
+    "explanation": "Extended thinking tokens are billed as output tokens (more expensive than input). In multi-turn conversations with caching, thinking blocks from previous assistant turns become part of the cached input, adding to input token costs when read from cache. This creates a cost tradeoff: better reasoning quality from thinking vs. higher cumulative costs from both the thinking output tokens and their subsequent cached input reads."
   }
 ]

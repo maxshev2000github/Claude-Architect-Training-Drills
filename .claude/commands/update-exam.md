@@ -1,5 +1,14 @@
 Search the web for the latest information about the Claude Certified Architect - Foundations (CCA-F) exam and update the question bank in this repo.
 
+## Context fork
+
+Determine how this command was invoked:
+
+- **Standalone** (user ran `/update-exam` directly): Execute all steps below, then summarize findings and stop.
+- **Part of daily tutor flow** (called from the scheduled tutor task or another command): Execute all steps below, then hand control back to the caller without extra summary — the caller will handle reporting.
+
+To decide: if the conversation already contains tutor-task context (e.g., references to `TRAINING_PROGRAM.md` cycle position, drill generation, or daily Q&A), treat it as the tutor flow. Otherwise treat it as standalone.
+
 ## Steps
 
 1. **Search for updates** — Use WebSearch to find the latest CCA-F exam info:

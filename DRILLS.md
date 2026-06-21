@@ -2,6 +2,41 @@
 
 Running log of CCA-F hands-on practice drills (newest first).
 
+## 2026-06-21 · Day 14 · Review — Week 2 (D2+D3) closed-book recall
+
+**Drill:** Build a closed-book recall map. From memory, create `DRILLS/day14_week2_recall.md` with a one-line answer to each of the 12 prompts in `CCA-F_Daily_2026-06-21.md` (§2) covering Week-2 material: CLAUDE.md hierarchy & settings precedence, slash-command location, `allowed-tools` vs prose, hooks vs prompts, headless flags, CI repo-context, the four permission modes, the 3 JSON-forcing techniques + enums, and long-context layout / quotes-first. Then re-read the review sheet, grade each line ✓/✗, and star every miss. Finally, log the unlogged Day 13 quiz score in the `TRAINING_PROGRAM.md` Scoring Log.
+
+**Acceptance criteria:**
+- [ ] `DRILLS/day14_week2_recall.md` exists with all 12 prompts answered **before** re-reading the sheet.
+- [ ] Each answer graded ✓/✗ and missed lines starred.
+- [ ] ≥9/12 correct on first pass (else flag the weakest sub-area for next cycle's Week-2 pass).
+- [ ] Day 13 D2+D3 quiz score added as a row in the `TRAINING_PROGRAM.md` Scoring Log (date, session, score, weakest sub-area, note).
+- [ ] Weakest sub-area named from: CLAUDE.md precedence / hooks-vs-prompt / headless-CI / permission-modes / structured-output ranking / enums-schema / long-context-quotes-first / few-shot.
+
+## 2026-06-20 · Day 13 · Quiz — D2+D3 mid-cycle check (10 MCQs)
+
+**Drill:** Take the 10-question quiz in `CCA-F_Daily_2026-06-20.md` (Cowork outputs), **closed-book**, timed ~20 min (exam pace ≈ 2 min/question). Covers Domains 2 (Claude Code config) + 3 (Prompt engineering) only — the Week-2 deep block. Mark every answer before viewing the key. Then log score + weakest sub-area in the `TRAINING_PROGRAM.md` Scoring Log.
+
+**Acceptance criteria:**
+- [ ] All 10 questions answered before viewing the answer key.
+- [ ] Completed in ≤20 min (exam pace check).
+- [ ] Score recorded (target ≥8/10; pass bar ≈72%).
+- [ ] Weakest sub-area identified (CLAUDE.md precedence / hooks-vs-prompt / headless CI / structured-output / few-shot / long-context) and noted for the Day 14 review.
+- [ ] Score row added to the `TRAINING_PROGRAM.md` Scoring Log.
+
+## 2026-06-18 · Day 11 · D3 Prompt Engineering — receipt line-item extraction tool schema
+
+**Drill:** Create `DRILLS/day11_receipt_schema.json` — a tool/function-call `input_schema` (JSON Schema) that extracts line items from a receipt (image/OCR text), plus a 3–4 line note on why a forced tool schema beats a prose "return JSON" prompt. Salesforce flavor: this feeds an expense-to-Opportunity sync, so mistyped `amount`/`currency` would corrupt downstream SPIFF/commission math — the schema must be strict.
+
+**Acceptance criteria:**
+- [ ] Valid JSON Schema usable as a tool `input_schema` (object with `type`, `properties`, `required`).
+- [ ] A `lineItems` array of objects with at least `description` (string), `quantity` (number/integer), `unitPrice` (number).
+- [ ] Receipt-level fields: `merchant` (string), `total` (number), `currency` as an **enum** (e.g. `USD|EUR|GBP|UAH`).
+- [ ] At least 3 fields marked `required`; each field has a one-line `description`.
+- [ ] A `date` field with a format hint (`"format": "date"` or `YYYY-MM-DD`).
+- [ ] Note (3–4 lines) ranking tool-schema vs prefill vs prose, + one line on what **quote-then-extract** would add.
+- [ ] Stretch: per-line `confidence` enum (`high|medium|low`) + one sentence on routing `low` items to human review (D3 → D5 escalation).
+
 ## 2026-06-17 · Day 10 · D2 Claude Code config — headless CI PR-review step
 
 **Drill:** Draft a GitHub Actions workflow step (YAML sketch) that runs Claude Code headless to review the diff on every pull request and post findings as a PR comment. Save as `DRILLS/day10_ci_pr_review.yml` (study sketch, not a live workflow). Salesforce flavor: imagine it flagging Apex anti-patterns (SOQL-in-loops, missing `with sharing`) before a Copado promotion.

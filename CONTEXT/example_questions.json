@@ -1545,5 +1545,161 @@
     },
     "answer": "B",
     "explanation": "Extended thinking tokens are billed as output tokens (more expensive than input). In multi-turn conversations with caching, thinking blocks from previous assistant turns become part of the cached input, adding to input token costs when read from cache. This creates a cost tradeoff: better reasoning quality from thinking vs. higher cumulative costs from both the thinking output tokens and their subsequent cached input reads."
+  },
+  {
+    "domain": 2,
+    "scenario": "A security team wants a PreToolUse hook that intercepts Bash tool calls. For most flagged commands, the hook should block execution outright. However, for borderline commands (e.g., 'git push --force' to a non-protected branch), the hook should defer to the user for a manual approval decision rather than auto-blocking.",
+    "question": "How should the hook's JSON output differ between these two cases?",
+    "options": {
+      "A": "Use exit code 2 for both cases — Claude Code always prompts the user on exit 2",
+      "B": "Return hookSpecificOutput with permissionDecision 'deny' for definite blocks, and permissionDecision 'ask' for borderline commands that should escalate to the user's permission dialog",
+      "C": "Return hookSpecificOutput with permissionDecision 'allow' for borderline commands so the user can decide later",
+      "D": "Use exit code 0 for borderline and exit code 1 for definite blocks"
+    },
+    "answer": "B",
+    "explanation": "PreToolUse hooks support four permission decisions: 'allow' (approve), 'deny' (block), 'ask' (escalate to user permission dialog), and 'defer' (let normal permission flow apply). For definite blocks, 'deny' prevents execution unconditionally. For borderline cases, 'ask' escalates to the user's interactive permission prompt, giving humans the final say. Exit code 2 blocks without user choice; 'allow' would approve without user input."
+  },
+  {
+    "domain": 2,
+    "scenario": "A team's PostToolUse hook inspects the output of Read tool calls on files matching '*.env'. The hook needs to redact any lines containing API keys before Claude processes the content, while also injecting a note telling Claude that the file was redacted.",
+    "question": "Which combination of JSON output fields achieves both goals?",
+    "options": {
+      "A": "Use 'decision: block' to prevent Claude from seeing the output entirely",
+      "B": "Use hookSpecificOutput.updatedToolOutput to replace the raw file content with the redacted version, and hookSpecificOutput.additionalContext to inject a note like 'API keys were redacted from this file'",
+      "C": "Use systemMessage to display the redacted content to the user, and suppressOutput to hide it from Claude",
+      "D": "Use a PreToolUse hook instead to prevent the Read from executing"
+    },
+    "answer": "B",
+    "explanation": "PostToolUse hooks can modify what Claude sees via updatedToolOutput (replaces the tool's raw result) and inject contextual guidance via additionalContext (appears as a system reminder). This combination lets the hook redact sensitive data while informing Claude that redaction occurred. Blocking entirely loses the non-sensitive content. PreToolUse would prevent reading the file at all, which is too restrictive. systemMessage displays to the user, not to Claude."
+  },
+  {
+    "domain": 3,
+    "scenario": "A developer enables extended thinking on a Claude API call that also uses forced tool choice (tool_choice: {type: 'tool', name: 'validate_input'}) to guarantee a specific tool is called. The API returns a 400 error.",
+    "question": "What is the cause of this error?",
+    "options": {
+      "A": "Extended thinking cannot be used with any tool_choice setting",
+      "B": "Extended thinking only supports tool_choice 'auto' and 'none' — forced tool selection (type: 'tool' or type: 'any') is not compatible with extended thinking",
+      "C": "The budget_tokens parameter was set too high for tool use",
+      "D": "Extended thinking requires streaming mode, which conflicts with tool use"
+    },
+    "answer": "B",
+    "explanation": "Extended thinking restricts tool_choice to 'auto' (default) and 'none'. Forced tool selection ('any' or specific tool name) is not supported because extended thinking needs the freedom to reason about whether and which tools to call. Attempting forced tool choice with thinking enabled returns a 400 error. The workaround is to use 'auto' and guide tool selection through the prompt instead."
+  },
+  {
+    "domain": 3,
+    "scenario": "An agentic loop uses extended thinking with tool use. After Claude calls a tool and receives the result, the developer constructs the next API request but strips the thinking blocks from the previous assistant turn to save input tokens.",
+    "question": "What will happen when this request is sent?",
+    "options": {
+      "A": "The request succeeds but Claude loses its reasoning chain, producing lower-quality follow-up reasoning",
+      "B": "The request fails with an invalid_request_error because thinking blocks must be preserved unchanged in multi-turn conversations with tool use — they carry encrypted signatures needed for continuity",
+      "C": "The request succeeds and Claude automatically regenerates the missing thinking",
+      "D": "The request succeeds but thinking is silently disabled for the remainder of the conversation"
+    },
+    "answer": "B",
+    "explanation": "Thinking blocks contain a 'signature' field with encrypted full thinking content required for multi-turn continuity. When continuing a conversation (especially with tool results), thinking blocks from previous assistant turns MUST be passed back unchanged. Stripping or modifying them causes an invalid_request_error. This is a common production pitfall — developers must preserve thinking blocks even when using display: 'omitted' mode where the thinking text is empty but the signature is still required."
+  },
+  {
+    "domain": 4,
+    "scenario": "An MCP server needs to ask the host's LLM to classify a document before deciding which processing tool to invoke. The server does not have its own LLM access — it must leverage the model already connected to the MCP host.",
+    "question": "Which MCP capability enables this pattern?",
+    "options": {
+      "A": "The server should expose a classification tool and let the host call it",
+      "B": "MCP sampling — a server capability that allows the server to request LLM completions from the host, with user approval, enabling the server to leverage the host's model for intermediate reasoning",
+      "C": "The server should make direct API calls to Claude using its own credentials",
+      "D": "MCP resources — the server reads a pre-computed classification from a resource"
+    },
+    "answer": "B",
+    "explanation": "MCP sampling is a protocol capability that lets servers request LLM completions from the host. This enables server-side workflows that need intermediate model reasoning (e.g., classify-then-route) without the server needing its own LLM access. The host controls which sampling requests to approve, maintaining human-in-the-loop oversight. This is distinct from tools (which the host calls on the server) and resources (which are static data)."
+  },
+  {
+    "domain": 4,
+    "scenario": "An MCP server deployed in a CI environment needs to restrict its file operations to only the repository checkout directory. The host (Claude Code) should communicate this boundary to the server at connection time.",
+    "question": "Which MCP capability enforces this operational boundary?",
+    "options": {
+      "A": "File path validation in each tool's implementation",
+      "B": "MCP roots — the client declares which directories or URIs the server is allowed to operate on, enforcing principle of least privilege at the protocol level",
+      "C": "A PreToolUse hook that checks file paths before each tool call",
+      "D": "An allowlist in the .mcp.json configuration file"
+    },
+    "answer": "B",
+    "explanation": "MCP roots is a client capability declared during initialization that tells the server which directories or URIs it may operate within. This enforces operational boundaries at the protocol level — the server knows its allowed scope upfront rather than discovering it through errors. While tool-level validation and hooks provide defense-in-depth, roots is the protocol-native mechanism for communicating operational boundaries. It follows the principle of least privilege by restricting server access before any operations begin."
+  },
+  {
+    "domain": 1,
+    "scenario": "An architect is building a document analysis pipeline. The input documents are 500 pages (~125K tokens) and fit within Claude's 200K context window. A junior developer proposes chunking the documents into 50 segments, processing each with a separate API call, and merging the results.",
+    "question": "What is the architectural problem with the chunking approach in this case?",
+    "options": {
+      "A": "Chunking is always better because it enables parallel processing",
+      "B": "Over-chunking documents that fit in the context window loses cross-section relationships, introduces merge complexity, and adds unnecessary latency and cost — the document should be processed in a single call when it fits",
+      "C": "The chunk size of 50 is too small; 10 chunks would be optimal",
+      "D": "Chunking requires extended thinking, which adds cost"
+    },
+    "answer": "B",
+    "explanation": "A common anti-pattern is reflexively chunking documents that actually fit within the context window. When a 125K-token document fits in a 200K-token window, single-call processing preserves cross-section relationships, avoids merge complexity, and reduces latency. Chunking is appropriate when documents exceed the context window, but unnecessary chunking fragments context, introduces merge logic, and multiplies API calls without benefit."
+  },
+  {
+    "domain": 1,
+    "scenario": "A multi-agent system fans out five research tasks to parallel subagents. Each subagent writes interim findings to a shared Salesforce record. Two subagents simultaneously update the same record field, and one update silently overwrites the other.",
+    "question": "What design principle was violated?",
+    "options": {
+      "A": "The subagents should have used a smaller model to reduce race conditions",
+      "B": "Parallelization can break stateful operations — parallel subagents must not perform concurrent writes to shared mutable state without coordination (e.g., append-only patterns, locks, or coordinator-mediated writes)",
+      "C": "The subagents should have been run sequentially instead of in parallel",
+      "D": "The Salesforce API should handle concurrency automatically"
+    },
+    "answer": "B",
+    "explanation": "Parallelization is powerful for independent tasks but dangerous for shared mutable state. When parallel subagents write to the same resource, race conditions cause silent data loss. The fix is not to abandon parallelism but to coordinate writes: use append-only patterns (each subagent writes to its own field/record), have the coordinator aggregate results and perform a single write, or use optimistic locking. The CCA-F tests understanding of when parallelism is safe vs. when it requires coordination."
+  },
+  {
+    "domain": 5,
+    "scenario": "A production system uses prompt caching with a stable system prompt and few-shot examples. The team changes the extended thinking budget_tokens from 4000 to 8000 mid-session to handle a harder query. They notice their message-level cache breakpoints miss, but system prompt cache still hits.",
+    "question": "Why does the system prompt cache survive the budget change while message caches are invalidated?",
+    "options": {
+      "A": "System prompts are never affected by any parameter changes",
+      "B": "System prompt cache_control breakpoints are preserved independently of thinking parameter changes, but message-level cache breakpoints are invalidated because changing budget_tokens alters the request prefix that message caches depend on",
+      "C": "Message caches have shorter TTLs than system prompt caches",
+      "D": "The system prompt was smaller and therefore cached differently"
+    },
+    "answer": "B",
+    "explanation": "Prompt caching uses prefix matching. System prompt caching operates independently from message-level caching — system prompt cache breakpoints survive thinking parameter changes. However, message-level cache breakpoints depend on the full request prefix including thinking configuration. When budget_tokens changes, the message prefix changes, invalidating message-level caches. This is a key nuance: teams can safely tune thinking budgets per-request without losing system prompt cache benefits, but multi-turn message caches will miss."
+  },
+  {
+    "domain": 2,
+    "scenario": "An architect wants to use a Stop hook that prevents Claude Code from ending its turn until all unit tests pass. The hook runs 'npm test', and if tests fail, it exits with code 2 and sends the failure output in stderr.",
+    "question": "What is the effect of a Stop hook exiting with code 2?",
+    "options": {
+      "A": "Claude stops normally and the test failures are logged but ignored",
+      "B": "Claude is prevented from stopping — the hook blocks the stop action, and the stderr content is fed back to Claude as an error message, prompting it to fix the failing tests before trying to stop again",
+      "C": "Claude retries the stop action after a 30-second delay",
+      "D": "The entire Claude Code session terminates with an error"
+    },
+    "answer": "B",
+    "explanation": "Exit code 2 from a Stop hook blocks Claude from completing its turn. The stderr output is fed back to Claude as an error message, effectively telling it 'you cannot stop yet — here is why.' Claude then continues working, typically addressing the test failures, and attempts to stop again on a subsequent turn. This creates a deterministic quality gate: Claude cannot declare 'done' until the Stop hook's conditions (passing tests) are satisfied."
+  },
+  {
+    "domain": 5,
+    "scenario": "A production Claude agent answers questions from a knowledge base. The team tracks aggregate accuracy at 94%. A detailed audit reveals: billing questions score 99%, shipping questions score 95%, but return-policy questions score only 68%. The team had been reporting the 94% aggregate to stakeholders.",
+    "question": "What are the two reliability anti-patterns present in this evaluation?",
+    "options": {
+      "A": "The aggregate metric is too high and the team should use a lower threshold",
+      "B": "Aggregate accuracy masks per-category failures (return-policy is well below pass bar), and the team lacks per-category routing for low-confidence categories — they should track accuracy by category and route the failing category to human review or a specialized handler",
+      "C": "The team should remove return-policy questions from the test set to improve the aggregate score",
+      "D": "The knowledge base needs more return-policy documents, which will automatically fix accuracy"
+    },
+    "answer": "B",
+    "explanation": "Two anti-patterns are present: (1) aggregate metrics masking per-category failures — 94% overall hides a 68% failure rate on returns, which is well below the 72% pass bar; and (2) no per-category escalation or routing — the failing category should be routed to human review or a specialized handler rather than being served by the same generic pipeline. The CCA-F emphasizes tracking accuracy by document type/category and using field-level or category-level confidence to route difficult cases."
+  },
+  {
+    "domain": 3,
+    "scenario": "A developer uses extended thinking with display: 'omitted' to reduce streaming latency. They notice the thinking field in the response is empty, but a 'signature' field contains an opaque string. In a follow-up turn, they need to pass this assistant response back.",
+    "question": "What is the purpose of the signature field, and what happens if the developer omits the thinking block entirely from the follow-up request?",
+    "options": {
+      "A": "The signature is a debugging artifact and can be safely omitted — the model regenerates its reasoning automatically",
+      "B": "The signature carries encrypted full thinking content needed for multi-turn continuity; omitting the thinking block (even with empty thinking text) from subsequent requests breaks the reasoning chain and causes an invalid_request_error",
+      "C": "The signature is used only for billing verification and has no effect on reasoning",
+      "D": "The signature enables prompt caching of thinking tokens and can be omitted if caching is not needed"
+    },
+    "answer": "B",
+    "explanation": "When display is 'omitted', thinking blocks return with empty thinking text but a populated signature field containing encrypted full thinking. This signature is essential for multi-turn continuity — it lets the model reconstruct its prior reasoning chain. The thinking block (with its signature) MUST be passed back unchanged in follow-up requests. Omitting or modifying it causes an invalid_request_error. This is true even though the thinking text appears empty — the signature carries the actual reasoning state."
   }
 ]

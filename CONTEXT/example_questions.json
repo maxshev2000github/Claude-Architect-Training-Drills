@@ -1547,6 +1547,149 @@
     "explanation": "Extended thinking tokens are billed as output tokens (more expensive than input). In multi-turn conversations with caching, thinking blocks from previous assistant turns become part of the cached input, adding to input token costs when read from cache. This creates a cost tradeoff: better reasoning quality from thinking vs. higher cumulative costs from both the thinking output tokens and their subsequent cached input reads."
   },
   {
+    "domain": 1,
+    "scenario": "An architect is building a multi-agent system using the Managed Agents API. The coordinator agent delegates to a code reviewer and a test writer. During testing, they notice the coordinator tries to have the code reviewer delegate a sub-task to a linting agent, but the linting agent is never invoked.",
+    "question": "Why does the nested delegation fail?",
+    "options": {
+      "A": "The linting agent was not added to the coordinator's roster",
+      "B": "The Managed Agents API enforces a one-level-deep delegation limit — the coordinator can delegate to agents in its roster, but those agents cannot spawn further subagents. Depth > 1 is ignored.",
+      "C": "The code reviewer needs its own agent_toolset_20260401 tool to delegate",
+      "D": "Nested delegation requires a separate session for each level"
+    },
+    "answer": "B",
+    "explanation": "The Managed Agents API enforces a strict one-level-deep delegation limit. The coordinator can delegate to agents in its multiagent.agents roster, but those agents cannot spawn their own subagents — depth > 1 is ignored. If the linting capability is needed, it must be added directly to the coordinator's roster or incorporated into the code reviewer's own tools. This constraint simplifies reasoning about agent topologies and prevents unbounded delegation chains."
+  },
+  {
+    "domain": 1,
+    "scenario": "A multiagent session has a coordinator delegating to 22 specialized agents. After spawning threads for each, the coordinator attempts to delegate to 3 more agents for a follow-up task but the new thread creation fails.",
+    "question": "What is the likely cause and the correct mitigation?",
+    "options": {
+      "A": "The coordinator's roster is limited to 20 agents, so 22 is already over the limit",
+      "B": "Multiagent sessions support a maximum of 25 concurrent threads; the coordinator should archive completed threads to free slots before spawning new ones",
+      "C": "Each agent can only be invoked once per session",
+      "D": "The session has exceeded its token budget"
+    },
+    "answer": "B",
+    "explanation": "Multiagent sessions support a maximum of 25 concurrent threads. While the roster can contain up to 20 unique agents, the coordinator can call multiple copies of each, creating multiple threads. When the 25-thread limit is reached, completed threads must be archived to free slots. Archiving only succeeds on idle threads — running threads must be interrupted first. The roster limit (20 agents) and thread limit (25 concurrent) are separate constraints."
+  },
+  {
+    "domain": 1,
+    "scenario": "In a multiagent session, the coordinator delegates a code review to Agent A. Later, the coordinator needs Agent A to perform a follow-up review on updated code. A developer assumes a new thread must be created for the follow-up.",
+    "question": "Is a new thread necessary for the follow-up?",
+    "options": {
+      "A": "Yes — each delegation always creates a new thread with fresh context",
+      "B": "No — threads are persistent. The coordinator can send a follow-up message to Agent A's existing thread, and Agent A retains its full conversation history from the first review",
+      "C": "No — but the coordinator must manually re-inject the previous context into the follow-up message",
+      "D": "Yes — threads are ephemeral and destroyed after each response"
+    },
+    "answer": "B",
+    "explanation": "Threads in the Managed Agents API are persistent. When the coordinator sends a follow-up to an agent it previously delegated to, that agent retains everything from its previous turns — conversation history, tool results, and reasoning context. This enables iterative workflows (review → feedback → re-review) without re-sending context or creating new threads. The coordinator does not need to re-inject prior context; the thread preserves it automatically."
+  },
+  {
+    "domain": 1,
+    "scenario": "A multiagent system uses a coordinator with three specialist agents. All agents share the same sandbox and filesystem but run in their own session threads. A developer is confused about what is shared vs. isolated between agents.",
+    "question": "What is shared and what is isolated between agents in a multiagent session?",
+    "options": {
+      "A": "Everything is shared — agents see each other's conversation history, tools, and file changes",
+      "B": "Nothing is shared — each agent has its own sandbox, filesystem, and context",
+      "C": "Agents share the sandbox, filesystem, and vault credentials, but each agent's conversation history, tools, MCP servers, and system prompt are isolated to its own thread",
+      "D": "Agents share conversation history but have isolated filesystems"
+    },
+    "answer": "C",
+    "explanation": "In the Managed Agents API, all agents in a session share the same sandbox, filesystem, and vault credentials. However, each agent runs in its own session thread with isolated context — its own conversation history, model, system prompt, tools, and MCP servers as defined in its agent configuration. This means Agent A can write a file that Agent B reads, but Agent A cannot see Agent B's conversation or use Agent B's tools. Vault credentials are session-scoped (available to all threads), while MCP servers are agent-scoped."
+  },
+  {
+    "domain": 1,
+    "scenario": "An architect is building a long-running agent using the Claude Agent SDK. The agent processes customer onboarding workflows that may take hours. The developer stores all agent state in memory and assumes the SDK session will persist for the full duration.",
+    "question": "What is the architectural flaw in this approach?",
+    "options": {
+      "A": "The SDK session will time out after 30 minutes regardless of activity",
+      "B": "SDK sessions should be treated as ephemeral — all messages, tool calls, and results must be persisted to durable storage (Postgres, Redis, or object storage) so the agent can resume after crashes, deploys, or process restarts",
+      "C": "In-memory state is fine as long as the process is monitored",
+      "D": "The developer should use a larger instance with more memory"
+    },
+    "answer": "B",
+    "explanation": "A core production pattern for the Claude Agent SDK is treating sessions as ephemeral. Storing state only in memory means a crash, deploy, or restart loses all progress. The conversation log should be persisted to durable storage (Postgres, Redis, object storage) after each tool call, enabling resume-from-checkpoint. The conversation log serves as the contract between agent turns and across handoffs — it is the source of truth, not the in-memory session."
+  },
+  {
+    "domain": 1,
+    "scenario": "A Claude-based agent enters a loop where it repeatedly calls the same tool with identical arguments, receiving the same error each time. After 15 iterations, the agent has consumed significant tokens without making progress.",
+    "question": "What production safeguard should prevent this behavior?",
+    "options": {
+      "A": "Lower the temperature to 0 to prevent the agent from retrying",
+      "B": "Implement a circuit breaker that sets a numeric iteration limit (e.g., 25) and detects repetition by hashing tool calls — tripping when identical calls repeat 3 times, then surfacing the failure rather than silently retrying",
+      "C": "Add a system prompt instruction saying 'do not retry failed tool calls'",
+      "D": "Set a global timeout that kills the process after 5 minutes"
+    },
+    "answer": "B",
+    "explanation": "Circuit breakers are an essential production safeguard for agentic systems. They combine two mechanisms: a hard iteration cap (e.g., 25 iterations) and repetition detection (hashing tool call signatures and tripping when identical calls repeat N times). When tripped, the failure should be surfaced explicitly — not silently retried. System prompt instructions are probabilistic and unreliable for preventing loops. Global timeouts are too blunt and waste tokens up to the timeout."
+  },
+  {
+    "domain": 1,
+    "scenario": "A multi-tenant SaaS platform runs Claude agents for different customers. Each customer's agent should only have access to tools relevant to their subscription tier. A developer gives every agent the full set of 30 available tools and relies on system prompt instructions to restrict usage per tenant.",
+    "question": "What is the security and reliability concern with this approach?",
+    "options": {
+      "A": "30 tools is fine — Claude handles large tool sets well",
+      "B": "Giving agents the union of all capabilities violates principle of least privilege. Tools should be scoped per session, task type, and tenant — never the full union. Prompt-based restrictions are probabilistic and can be bypassed.",
+      "C": "The concern is only cost — unnecessary tools add token overhead but pose no security risk",
+      "D": "System prompt restrictions are sufficient if they are detailed enough"
+    },
+    "answer": "B",
+    "explanation": "Tool permissioning should follow the principle of least privilege: scope available tools to the specific session, task type, and tenant. Giving every agent the union of all capabilities creates both security risks (an agent might access tools outside its tenant's authorization) and reliability risks (too many tools degrades tool selection accuracy). Prompt-based restrictions are probabilistic — they can be bypassed through prompt injection or model error. Programmatic tool scoping is the correct enforcement mechanism."
+  },
+  {
+    "domain": 1,
+    "scenario": "An architect is choosing between five multi-agent orchestration patterns for a customer support system: fan-out, pipeline, debate, supervisor, and swarm. The system needs a lead agent that breaks work into pieces, delegates to specialists, and synthesizes results with clear accountability.",
+    "question": "Which pattern best fits this requirement?",
+    "options": {
+      "A": "Fan-out — scatter tasks to all agents and gather results",
+      "B": "Pipeline — chain agents sequentially, each transforming the output",
+      "C": "Supervisor — a lead agent delegates to specialists, monitors progress, and synthesizes results with hierarchical accountability",
+      "D": "Swarm — dynamic peer agents self-organize without a central coordinator"
+    },
+    "answer": "C",
+    "explanation": "The supervisor (coordinator-worker) pattern fits scenarios requiring hierarchical delegation with clear accountability. The lead agent owns the task lifecycle: decomposing work, delegating to specialists, monitoring progress, and synthesizing results. Fan-out is a sub-pattern of supervisor (parallel dispatch without ongoing oversight). Pipeline is for sequential transformations. Debate is for multi-perspective critique. Swarm lacks the centralized accountability the requirement demands. Supervisor is the 2026 production default for most enterprise multi-agent systems."
+  },
+  {
+    "domain": 1,
+    "scenario": "A coordinator agent's multiagent roster references Agent B at version 3. A week later, the team updates Agent B to version 4 with improved instructions and a new tool. The coordinator continues to delegate to Agent B but the new tool is never available.",
+    "question": "Why is the coordinator still using the old version of Agent B?",
+    "options": {
+      "A": "The coordinator automatically uses the latest version after a 24-hour cache refresh",
+      "B": "The coordinator's roster is snapshotted at creation time — referenced agents are pinned to the versions resolved when the coordinator was created. To use version 4, the coordinator must be updated so its roster references the new version.",
+      "C": "Agent versions are immutable and cannot be updated after creation",
+      "D": "The coordinator uses whichever version was first invoked in the current session"
+    },
+    "answer": "B",
+    "explanation": "The Managed Agents API snapshots the coordinator's configuration, including its multiagent.agents roster, at creation time. Referenced agents are pinned to the versions resolved at that point and do not automatically pick up later updates. To delegate to a newer version of an agent, the coordinator must be explicitly updated so its roster references the new version. This design ensures deterministic behavior — the coordinator's dependencies don't change unexpectedly."
+  },
+  {
+    "domain": 4,
+    "scenario": "In a multiagent session, a subagent needs to call an MCP server that requires authentication via a vault credential. The architect configured the MCP server in the subagent's definition but forgot to include the vault credential at session creation.",
+    "question": "Why do the subagent's MCP calls fail to authenticate?",
+    "options": {
+      "A": "MCP servers cannot be used by subagents, only by the coordinator",
+      "B": "MCP servers are agent-scoped (declared per agent), but vault credentials are session-scoped (passed at session creation and shared across all threads). The missing vault_ids at session creation means no thread has access to the credential.",
+      "C": "Each agent must declare its own vault credentials in its agent definition",
+      "D": "The MCP server URL in the vault credential does not match the agent's server URL"
+    },
+    "answer": "B",
+    "explanation": "In the Managed Agents API, MCP servers are agent-scoped — each agent declares which servers it uses. However, vault credentials are session-scoped — they are passed via vault_ids at session creation and apply to all threads. If a vault credential is not included at session creation, no agent in the session can authenticate with the corresponding MCP server. The vault credential's mcp_server_url must also match the agent's mcp_servers[].url exactly, including scheme and trailing slash."
+  },
+  {
+    "domain": 1,
+    "scenario": "A production agentic system needs three tiers of spending controls: protection against runaway loops on individual tasks, abuse prevention per user, and budget enforcement per tenant in a multi-tenant environment.",
+    "question": "Which cost control architecture satisfies all three requirements?",
+    "options": {
+      "A": "Set a single global API spending limit and monitor usage dashboards",
+      "B": "Implement three-tier hard cost caps checked before every API call: per-task ceilings (runaway loop protection), per-user daily/monthly limits (abuse prevention), and per-tenant monthly budgets (multi-tenant safety)",
+      "C": "Use billing alerts that notify the team when spending exceeds thresholds",
+      "D": "Limit max_tokens on each API call to cap individual request costs"
+    },
+    "answer": "B",
+    "explanation": "Production agentic systems require three-tier spending controls: per-task ceilings prevent runaway loops from consuming unbounded tokens, per-user limits prevent individual abuse, and per-tenant budgets enforce commercial boundaries in multi-tenant systems. These must be hard caps checked before every API call — not alerts (which notify after overspend) or single global limits (which don't isolate failures). max_tokens caps individual response size but doesn't prevent loop-driven cost accumulation."
+  },
+  {
     "domain": 2,
     "scenario": "A security team wants a PreToolUse hook that intercepts Bash tool calls. For most flagged commands, the hook should block execution outright. However, for borderline commands (e.g., 'git push --force' to a non-protected branch), the hook should defer to the user for a manual approval decision rather than auto-blocking.",
     "question": "How should the hook's JSON output differ between these two cases?",

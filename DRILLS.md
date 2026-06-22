@@ -2,6 +2,19 @@
 
 Running log of CCA-F hands-on practice drills (newest first).
 
+## 2026-06-22 · Day 15 · D4 MCP — transport & auth decision table
+
+**Drill:** Create `DRILLS/day15_transport_table.md` — a decision table for 4 deployment scenarios (local CLI wrapper; company-hosted multi-rep Salesforce server; ephemeral CI Jira server; public partner analytics server needing resume). For each, pick **transport** (stdio / Streamable HTTP) + **auth** (env var / OAuth 2.1 / bearer) + one-line justification. Add a footnote on what replaced SSE and why a 2025-era design shouldn't pick it. Reinforces the SSE-vs-Streamable-HTTP trap (Max's only Day-6 quiz miss).
+
+**Acceptance criteria:**
+- [ ] `DRILLS/day15_transport_table.md` exists; all 4 rows have transport + auth + 1-line justification.
+- [ ] Scenario 1 = **stdio** + **env var**; Scenarios 2 & 4 = **Streamable HTTP**.
+- [ ] Scenario 2 names **OAuth 2.1** and ties it to **per-user identity** (each rep acts as themselves; Salesforce sharing rules apply).
+- [ ] Scenario 4 cites **resumability / session reconnect** as the reason HTTP wins.
+- [ ] Scenario 3 justified on lifecycle (ephemeral, machine-to-machine); bearer/service token acceptable, with a note on stdio-in-runner vs HTTP.
+- [ ] Footnote states **Streamable HTTP replaced HTTP+SSE**; SSE is legacy/deprecated.
+- [ ] Stretch: 5th "biggest risk" column per row (e.g. token leak via logs, confused deputy on shared server) — bridges to Day 17.
+
 ## 2026-06-21 · Day 14 · Review — Week 2 (D2+D3) closed-book recall
 
 **Drill:** Build a closed-book recall map. From memory, create `DRILLS/day14_week2_recall.md` with a one-line answer to each of the 12 prompts in `CCA-F_Daily_2026-06-21.md` (§2) covering Week-2 material: CLAUDE.md hierarchy & settings precedence, slash-command location, `allowed-tools` vs prose, hooks vs prompts, headless flags, CI repo-context, the four permission modes, the 3 JSON-forcing techniques + enums, and long-context layout / quotes-first. Then re-read the review sheet, grade each line ✓/✗, and star every miss. Finally, log the unlogged Day 13 quiz score in the `TRAINING_PROGRAM.md` Scoring Log.

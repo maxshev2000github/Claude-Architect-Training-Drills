@@ -1844,5 +1844,291 @@
     },
     "answer": "B",
     "explanation": "When display is 'omitted', thinking blocks return with empty thinking text but a populated signature field containing encrypted full thinking. This signature is essential for multi-turn continuity — it lets the model reconstruct its prior reasoning chain. The thinking block (with its signature) MUST be passed back unchanged in follow-up requests. Omitting or modifying it causes an invalid_request_error. This is true even though the thinking text appears empty — the signature carries the actual reasoning state."
+  },
+  {
+    "domain": 1,
+    "scenario": "[Scenario 1: Customer Support Agent] A Claude-based customer support agent has access to MCP tools: get_customer, lookup_order, process_refund, and escalate_to_human. A customer asks for a refund on an order. The agent calls lookup_order and receives an empty result set with status 'success'. The agent interprets this as 'no order found' and tells the customer their order doesn't exist. The customer insists they placed the order yesterday.",
+    "question": "What is the most likely design flaw causing this incorrect response?",
+    "options": {
+      "A": "The agent should have used a different model for order lookups",
+      "B": "The lookup_order tool does not distinguish between 'no matching results' and 'access failure' — the tool should return structured responses that explicitly differentiate empty results from errors, including the query that was executed",
+      "C": "The agent should always escalate when no order is found",
+      "D": "The customer should provide their order number before the agent searches"
+    },
+    "answer": "B",
+    "explanation": "In the Customer Support Agent scenario, tool responses must clearly distinguish between valid empty results ('no orders match this query') and access failures ('could not reach the order database'). An empty result with status 'success' is ambiguous — was the query correct? Did it search the right system? The tool should return structured metadata including resultCount, status, and the executed query so the agent can reason about whether the search was comprehensive or needs refinement."
+  },
+  {
+    "domain": 5,
+    "scenario": "[Scenario 1: Customer Support Agent] A customer support agent handles returns, billing disputes, and account issues. The target is 80%+ first-contact resolution. A customer expresses frustration using profanity but has a straightforward billing question that the agent can resolve. The agent's current logic escalates any conversation with negative sentiment to a human.",
+    "question": "Why is this escalation logic flawed, and what should trigger escalation instead?",
+    "options": {
+      "A": "The agent should escalate even faster when profanity is detected",
+      "B": "Sentiment-based escalation is an anti-pattern — it wastes human agent time on resolvable issues. Valid escalation triggers are: explicit customer requests for a human, policy gaps the agent cannot resolve, or genuine inability to make progress on the issue",
+      "C": "The agent should lower its confidence threshold when negative sentiment is detected",
+      "D": "The agent should respond to profanity with a warning before continuing"
+    },
+    "answer": "B",
+    "explanation": "Sentiment-based escalation is a frequently tested anti-pattern in the Customer Support Agent scenario. An angry customer with a simple billing question doesn't need a human — the agent can resolve it. Escalating on sentiment wastes human resources and reduces the 80%+ first-contact resolution target. Correct triggers are: (1) explicit customer request for a human (honor immediately, no negotiation), (2) policy gaps, (3) genuine inability to progress. Self-reported confidence scores are also an anti-pattern trigger."
+  },
+  {
+    "domain": 2,
+    "scenario": "[Scenario 2: Claude Code Team Setup] A team is onboarding 8 developers to a Claude Code project. Senior devs have extensive personal ~/.claude/CLAUDE.md files with coding preferences. The project has a root CLAUDE.md and .claude/rules/ with path-specific rules. Junior developers report that Claude Code gives them different suggestions than senior devs on the same files.",
+    "question": "What is causing the inconsistency, and how should the team fix it?",
+    "options": {
+      "A": "Junior devs should copy senior devs' personal CLAUDE.md files",
+      "B": "Personal ~/.claude/CLAUDE.md files are not shared via version control. Team conventions must be codified in the project-level CLAUDE.md and .claude/rules/ directory, which are committed to the repo and apply to everyone equally",
+      "C": "The inconsistency is caused by different Claude Code versions across machines",
+      "D": "Each developer should use settings.json to override the project-level rules"
+    },
+    "answer": "B",
+    "explanation": "In the Claude Code Team Setup scenario, a key gotcha is that user-level ~/.claude/CLAUDE.md is personal and not shared. Only project-level CLAUDE.md and .claude/rules/ files are committed to the repo. To ensure consistent behavior across the team, all coding conventions must live in version-controlled project files. Personal CLAUDE.md files provide individual preferences but should never contain team-critical rules."
+  },
+  {
+    "domain": 2,
+    "scenario": "[Scenario 2: Claude Code Team Setup] A project's root CLAUDE.md has grown to 500+ lines containing coding standards, an API reference, onboarding docs, and release procedures. Developers notice higher costs per session and Claude occasionally ignores rules buried deep in the file.",
+    "question": "What is the recommended approach to restructure this?",
+    "options": {
+      "A": "Split the CLAUDE.md into one file per developer with their relevant sections",
+      "B": "Keep CLAUDE.md short with only always-relevant rules. Move reference material to separate files that Claude reads on demand via @path imports, so bulky content is pulled in just-in-time rather than loaded every session",
+      "C": "Move everything to .claude/rules/ files to reduce CLAUDE.md size",
+      "D": "Increase the context window setting to accommodate the larger CLAUDE.md"
+    },
+    "answer": "B",
+    "explanation": "CLAUDE.md is injected into every session, consuming context on each turn. A 500+ line CLAUDE.md wastes tokens, increases cost, and buries important rules where they get less attention (lost-in-the-middle effect). The fix is to keep CLAUDE.md lean with consistently-relevant guidance and move reference material to separate files pulled via @path imports on demand. .claude/rules/ is for path-scoped rules, not a general dumping ground for all content."
+  },
+  {
+    "domain": 1,
+    "scenario": "[Scenario 3: Multi-Agent Research System] A research coordinator delegates to three subagents: web_search, analysis, and synthesis. The synthesis subagent produces a report that contradicts the analysis subagent's findings. Logs confirm the analysis subagent returned correct, detailed results.",
+    "question": "What is the most likely cause of the contradiction?",
+    "options": {
+      "A": "The synthesis model is too small and should be upgraded to Opus",
+      "B": "The coordinator passed the raw user query to the synthesis subagent instead of passing the analysis subagent's output as the synthesis subagent's primary input — each subagent should receive precisely the inputs it needs from prior stages",
+      "C": "The synthesis subagent should run in the same context as the analysis subagent",
+      "D": "The coordinator should run synthesis multiple times and pick the best result"
+    },
+    "answer": "B",
+    "explanation": "In the Multi-Agent Research System scenario, context passing between subagents is critical. The coordinator must orchestrate information flow: the synthesis subagent should receive the analysis output as its primary input, not just the raw user query. Passing only the raw query causes the synthesis agent to independently interpret the data, producing contradictions. The coordinator's job is to pack a self-contained briefing into each subagent spawn, with content separated from metadata so attribution survives handoff."
+  },
+  {
+    "domain": 5,
+    "scenario": "[Scenario 3: Multi-Agent Research System] A multi-agent research system synthesizes findings from four subagents into a final report. The coordinator passes all raw subagent outputs (totaling ~150K tokens) directly into the synthesis agent's context. The synthesis agent produces a shallow summary that misses key findings from the middle sections.",
+    "question": "What two problems does this design create?",
+    "options": {
+      "A": "The synthesis agent needs extended thinking enabled and a larger model",
+      "B": "Context bloat from raw tool outputs degrades reasoning quality, and the lost-in-the-middle effect causes findings in the middle of large inputs to receive less attention. The coordinator should trim outputs to relevant excerpts and place critical summaries at the beginning.",
+      "C": "The subagents should produce shorter outputs to reduce total token count",
+      "D": "The synthesis should be split into multiple sequential calls, one per subagent"
+    },
+    "answer": "B",
+    "explanation": "Two compounding problems: (1) Context bloat — including 150K tokens of raw subagent output saturates the context window, degrading reasoning quality. The coordinator should trim each subagent's output to relevant excerpts. (2) Lost-in-the-middle — information placed in the middle of large inputs gets less attention. The coordinator should place the most critical summaries at the beginning of the aggregated input. Both are frequently tested anti-patterns in the Multi-Agent Research System scenario."
+  },
+  {
+    "domain": 4,
+    "scenario": "[Scenario 4: Developer Productivity Tools] A team builds an MCP server that helps developers navigate an unfamiliar codebase. The server exposes 15 tools including read_file, search_code, list_directory, get_file_tree, find_references, get_definition, get_imports, analyze_complexity, run_tests, format_code, lint_file, git_log, git_blame, git_diff, and open_in_editor. During testing, Claude frequently selects the wrong tool.",
+    "question": "What is the primary cause and the best architectural fix?",
+    "options": {
+      "A": "Claude needs better system prompt instructions explaining each tool",
+      "B": "15 tools exceeds the optimal range of 4-5 per agent. Split the tools across specialized agents (e.g., a navigation agent with read/search/list, a code analysis agent with references/definitions/complexity, and a git agent with log/blame/diff)",
+      "C": "Rename the tools with numeric prefixes so Claude can select by number",
+      "D": "Add a routing classifier that pre-selects the tool before Claude sees them"
+    },
+    "answer": "B",
+    "explanation": "In the Developer Productivity Tools scenario, tool count directly impacts selection accuracy. Research shows 4-5 tools per agent is optimal; 15 tools significantly degrades selection. The fix is to split tools across specialized agents, each with a focused set: navigation (read, search, list, tree), analysis (references, definitions, complexity), and git operations (log, blame, diff). This also enables model-per-role optimization — navigation can use Haiku while analysis uses Sonnet."
+  },
+  {
+    "domain": 4,
+    "scenario": "[Scenario 4: Developer Productivity Tools] A developer productivity agent uses an MCP tool to search a large codebase. The search returns 500KB of JSON results containing every occurrence of a pattern across 200 files. This single tool result consumes most of the remaining context window.",
+    "question": "How should this be handled to prevent context degradation?",
+    "options": {
+      "A": "Increase the context window to the maximum available size",
+      "B": "Use a PostToolUse hook to truncate or summarize the oversized results before they enter the context, or delegate processing of the large result to a subagent with fresh context that returns only a compact summary",
+      "C": "Set the tool to always return a maximum of 10 results",
+      "D": "Skip the search and ask the developer to narrow their query"
+    },
+    "answer": "B",
+    "explanation": "Large tool results can saturate the context window and degrade subsequent reasoning. Two complementary strategies are: (1) PostToolUse hooks that truncate or summarize oversized results before they enter context (context trimming), and (2) delegating processing of large results to a subagent with fresh context that returns only a compact summary to the coordinator. Hard-limiting results to 10 may miss important matches. The Developer Productivity scenario specifically tests context management with verbose codebase exploration outputs."
+  },
+  {
+    "domain": 2,
+    "scenario": "[Scenario 5: Claude Code in CI/CD] A DevOps team wants Claude Code to automatically review every PR in their GitHub Actions pipeline. The review should produce structured JSON output that a downstream step parses to post comments on the PR. The pipeline must be fully non-interactive with no user prompts.",
+    "question": "Which combination of Claude Code features enables this?",
+    "options": {
+      "A": "Run Claude Code interactively with --auto-approve and capture terminal output",
+      "B": "Use the -p flag with the review prompt for non-interactive execution, --output-format json for machine-parseable output, and each invocation runs in an isolated session by default",
+      "C": "Use --batch-mode with --format=structured for CI-friendly output",
+      "D": "Pipe the diff via stdin and parse Claude's natural language response with regex"
+    },
+    "answer": "B",
+    "explanation": "The CI/CD scenario tests the canonical headless integration pattern: -p runs Claude Code non-interactively with a single prompt (natural session isolation since each invocation starts fresh), and --output-format json produces structured JSON output that downstream CI steps can parse programmatically. Interactive mode with --auto-approve is an anti-pattern for CI — it's not truly headless. Regex parsing of natural language output is brittle."
+  },
+  {
+    "domain": 2,
+    "scenario": "[Scenario 5: Claude Code in CI/CD] A CI pipeline runs Claude Code to review Apex code in a Salesforce project. The review frequently produces false positives — flagging code patterns that are actually acceptable per the team's Salesforce conventions. This wastes developer time triaging irrelevant findings.",
+    "question": "How should false positives be reduced?",
+    "options": {
+      "A": "Lower Claude's temperature in CI mode to make it less creative",
+      "B": "Add project-specific conventions and acceptable patterns to CLAUDE.md and .claude/rules/ files with glob patterns matching Apex files, so Claude Code has context about what is acceptable in this codebase",
+      "C": "Filter the JSON output with a script that removes known false positive patterns",
+      "D": "Switch to a smaller model that produces fewer findings overall"
+    },
+    "answer": "B",
+    "explanation": "In the CI/CD scenario, false positives are reduced by giving Claude Code project-specific context. CLAUDE.md should contain the team's conventions (e.g., 'SOQL in loops is acceptable in batch Apex classes'), and .claude/rules/ files with glob patterns (e.g., **/*.cls) provide path-specific guidance. This is the idiomatic approach — Claude Code reads these files automatically and applies them contextually. Post-processing filters are brittle and miss new false positive patterns."
+  },
+  {
+    "domain": 3,
+    "scenario": "[Scenario 6: Structured Data Extraction] A pipeline extracts structured data from legal contracts. The JSON schema requires fields like arbitration_clause, penalty_amount, and expiration_date. Not every contract contains all fields. The current schema marks all fields as required, causing Claude to hallucinate values for missing fields.",
+    "question": "What is the correct schema design fix?",
+    "options": {
+      "A": "Add a system prompt instruction saying 'leave fields blank if not found'",
+      "B": "Make optional fields nullable in the JSON schema and instruct the model to return null when information is absent rather than guessing — this gives Claude a valid way to express 'not found' without fabricating data",
+      "C": "Remove optional fields from the schema entirely so they're never extracted",
+      "D": "Add a post-processing step that strips any values that look suspicious"
+    },
+    "answer": "B",
+    "explanation": "In the Structured Data Extraction scenario, nullable fields are the key defense against hallucination. When all fields are required, Claude has no valid way to express 'not found' and resorts to fabrication to satisfy the schema constraint. Making fields nullable with explicit null values gives the model a legitimate output for absent data. This is distinct from syntax errors (which validation-retry loops fix) — it addresses semantic errors where the source data simply lacks the information."
+  },
+  {
+    "domain": 3,
+    "scenario": "[Scenario 6: Structured Data Extraction] A structured data extraction pipeline processes invoices from 15 vendor formats. The team uses a single prompt with a JSON schema and a validation-retry loop. Format compliance is 99%, but semantic accuracy varies wildly: 98% for standard invoices, 72% for handwritten ones, and 45% for multilingual invoices. The team reports aggregate accuracy of 91%.",
+    "question": "What are the two reliability problems with this evaluation and pipeline design?",
+    "options": {
+      "A": "The validation-retry loop should be removed to reduce latency",
+      "B": "Aggregate accuracy masks per-format failures (45% multilingual is unacceptable), and the pipeline lacks per-format routing — handwritten and multilingual invoices should be routed to specialized prompts with format-specific few-shot examples or escalated to human review",
+      "C": "The team should increase temperature for multilingual invoices to explore more interpretations",
+      "D": "All 15 formats should use separate JSON schemas to improve accuracy"
+    },
+    "answer": "B",
+    "explanation": "Two problems: (1) Aggregate metrics masking per-category failures — 91% overall hides a 45% failure rate on multilingual invoices. Per-format accuracy must be tracked separately. (2) No per-format routing — difficult formats need specialized handling: format-specific few-shot examples, dedicated prompts, or human review for low-confidence extractions. The Structured Data Extraction scenario specifically tests understanding that validation-retry loops fix syntax errors but cannot fix semantic accuracy problems caused by insufficient format-specific guidance."
+  },
+  {
+    "domain": 3,
+    "scenario": "A developer is writing a system prompt for a customer support agent using the PRECISE framework (Persona, Role, Explicit criteria, Context, Instructions, Steps, Examples). The prompt includes a detailed Persona, clear Instructions, and step-by-step procedures, but lacks the Examples section. During testing, the agent's tone and response length vary wildly between interactions.",
+    "question": "What is the most likely cause of the inconsistent tone and length?",
+    "options": {
+      "A": "The temperature setting is too high and should be reduced to 0",
+      "B": "Without concrete Examples in the prompt, Claude lacks a calibration anchor for tone, length, and format — adding 2-3 few-shot examples of ideal responses would establish the expected output pattern",
+      "C": "The Persona section is too detailed and is confusing the model",
+      "D": "The system prompt should be moved to the user message for better adherence"
+    },
+    "answer": "B",
+    "explanation": "The PRECISE framework emphasizes that Examples serve as calibration anchors. Without them, the model has instructions but no concrete reference point for what 'good' looks like in terms of tone, length, and format. Few-shot examples are one of the most effective ways to stabilize output consistency. This is a key prompt engineering concept tested in the CCA-F exam."
+  },
+  {
+    "domain": 1,
+    "scenario": "An architect is designing a system where inbound customer requests vary in complexity. Simple FAQ queries (80% of traffic) need fast, cheap responses, while complex account disputes (20%) require deep multi-step reasoning with tool access. The current design sends all requests to a single Claude Sonnet agent.",
+    "question": "Which agentic pattern best optimizes this system for cost and quality?",
+    "options": {
+      "A": "Use a single Opus agent for all requests to maximize quality across the board",
+      "B": "Implement a routing pattern: a lightweight classifier (Haiku) triages requests, routing simple queries to Haiku with canned responses and complex disputes to Sonnet or Opus with full tool access",
+      "C": "Process all requests with Haiku to minimize cost, then retry failed ones with Opus",
+      "D": "Use prompt chaining: every request goes through classify → research → respond stages regardless of complexity"
+    },
+    "answer": "B",
+    "explanation": "The routing pattern is ideal when request complexity varies significantly. A lightweight classifier (Haiku) can quickly categorize requests at minimal cost, then route them to the appropriate model tier. Simple queries go to Haiku for speed and cost efficiency, while complex disputes are routed to more capable models (Sonnet/Opus) with tool access. This avoids the waste of running all requests through expensive models or the quality loss of running everything through cheap ones."
+  },
+  {
+    "domain": 4,
+    "scenario": "A team is building an MCP server that provides Claude with access to a production PostgreSQL database containing customer PII (names, emails, payment info). The developer proposes exposing a generic execute_sql tool that accepts arbitrary SQL queries so Claude can flexibly answer any data question.",
+    "question": "What is the primary architectural concern with this approach?",
+    "options": {
+      "A": "SQL queries are too slow for real-time agent interactions",
+      "B": "MCP servers cannot connect to databases directly",
+      "C": "Exposing arbitrary SQL execution violates least-privilege principles — the server should expose purpose-specific tools (e.g., lookup_customer, get_order_status) with parameterized queries that limit access to only the data and operations the agent needs",
+      "D": "The tool description will be too long for Claude to understand"
+    },
+    "answer": "C",
+    "explanation": "Least-privilege tool scoping is a core MCP security principle. A generic execute_sql tool gives the agent unrestricted access to the entire database, including destructive operations (DROP TABLE, DELETE) and sensitive data it doesn't need. Purpose-specific tools with parameterized queries enforce boundaries: the agent can only perform pre-approved operations on pre-approved data. This is a key security architecture concept tested in the CCA-F exam."
+  },
+  {
+    "domain": 5,
+    "scenario": "A knowledge assistant needs to answer questions using a company's internal documentation totaling 50,000+ pages that update weekly. A developer proposes loading all documents into Claude's 200K context window for each query to ensure comprehensive answers.",
+    "question": "Why is this approach impractical, and what is the recommended alternative?",
+    "options": {
+      "A": "The context window is large enough; the developer should proceed with loading all documents",
+      "B": "50,000+ pages far exceed the context window capacity. The recommended approach is RAG (Retrieval-Augmented Generation): index documents in a vector database, retrieve only relevant chunks per query, and pass those chunks as context to Claude",
+      "C": "The developer should split the documents across 250 separate API calls and merge the answers",
+      "D": "Claude should be fine-tuned on the documentation instead of using context"
+    },
+    "answer": "B",
+    "explanation": "50,000+ pages (~12.5M+ tokens) vastly exceed Claude's 200K context window. RAG is the standard architecture for large knowledge bases: documents are chunked, embedded, and stored in a vector database. At query time, only the most relevant chunks are retrieved and injected into the context window. This gives Claude access to relevant information without exceeding context limits, and the weekly updates only require re-indexing changed documents."
+  },
+  {
+    "domain": 2,
+    "scenario": "A developer wants to use Claude Code across three environments: the CLI terminal, VS Code with the Claude extension, and a CI/CD pipeline. They want consistent project context (coding standards, architecture decisions) available in all three environments.",
+    "question": "What is the best way to ensure consistent project context across all Claude Code environments?",
+    "options": {
+      "A": "Create separate configuration files for each environment",
+      "B": "Use the project-level CLAUDE.md file checked into the repository — it is automatically loaded by Claude Code regardless of whether it runs in the CLI, an IDE extension, or CI/CD, providing consistent project context across all environments",
+      "C": "Store all context in the user-level ~/.claude/CLAUDE.md file",
+      "D": "Pass the context as a command-line flag each time Claude Code is invoked"
+    },
+    "answer": "B",
+    "explanation": "The project-level CLAUDE.md is the canonical source of persistent project context. Because it lives in the repository, it is version-controlled and automatically loaded by Claude Code in any environment — CLI, IDE extensions, or headless CI/CD. This ensures every developer and every pipeline run operates with the same coding standards and architectural decisions. User-level CLAUDE.md provides personal defaults but is not shared across the team."
+  },
+  {
+    "domain": 1,
+    "scenario": "An architect is choosing between an evaluator-optimizer pattern and an orchestrator-worker pattern for a content generation pipeline. The pipeline needs to produce marketing copy that meets strict brand guidelines. Initial drafts often need multiple rounds of revision before they comply.",
+    "question": "Which pattern is the better fit and why?",
+    "options": {
+      "A": "Orchestrator-worker, because it allows parallel generation of multiple copy variants",
+      "B": "Evaluator-optimizer: one agent generates the copy, a separate evaluator agent checks it against brand guidelines, and if it fails, the generator revises based on the evaluator's feedback — this loop continues until the copy passes or a max iteration limit is reached",
+      "C": "A single mega-prompt that includes all brand guidelines will produce compliant copy in one pass",
+      "D": "Fan-out pattern with five generators and a majority-vote selector"
+    },
+    "answer": "B",
+    "explanation": "The evaluator-optimizer pattern is designed for iterative refinement tasks. A generator produces output, an evaluator assesses it against defined criteria (brand guidelines), and feedback drives revision cycles. This is superior to orchestrator-worker here because the task isn't decomposable into independent subtasks — it's a single output that needs quality iteration. The pattern naturally supports a max-iteration guard to prevent infinite loops."
+  },
+  {
+    "domain": 4,
+    "scenario": "A team is migrating their MCP server from SSE transport to the newer recommended protocol. The server is deployed behind a cloud load balancer and serves multiple concurrent Claude Code clients. They need to maintain per-client session state across requests.",
+    "question": "What is the recommended transport and how should session state be handled?",
+    "options": {
+      "A": "Keep using SSE since it is still the standard for remote MCP servers",
+      "B": "Switch to Streamable HTTP (the recommended remote transport as of MCP 2025-11). Use the Mcp-Session-Id header to maintain per-client session affinity, and store session state in an external store (e.g., Redis) so any backend instance behind the load balancer can serve any client",
+      "C": "Use stdio transport with SSH tunnels for each remote client",
+      "D": "Use WebSocket transport with sticky sessions on the load balancer"
+    },
+    "answer": "B",
+    "explanation": "Streamable HTTP replaced SSE as the recommended remote MCP transport. It uses the Mcp-Session-Id header for session management, which is critical in load-balanced deployments. Session state should be externalized (e.g., to Redis) rather than stored in-memory, so requests can be served by any backend instance. This is a key MCP transport evolution topic tested on the CCA-F exam."
+  },
+  {
+    "domain": 1,
+    "scenario": "A developer is implementing a multi-step document processing pipeline using the Claude Agent SDK. The pipeline has three stages: extract entities, classify document, and generate summary. Each stage's output feeds into the next. The developer considers running all three stages as parallel subagents to reduce latency.",
+    "question": "Why is parallelization inappropriate here, and what pattern should be used instead?",
+    "options": {
+      "A": "Parallelization is fine — subagents can share state implicitly through the coordinator",
+      "B": "The stages have sequential dependencies (classify needs extracted entities, summarize needs the classification), so they cannot run in parallel. Use prompt chaining: execute each stage as a separate API call, passing the output of one as the input to the next",
+      "C": "All three stages should be combined into a single mega-prompt for simplicity",
+      "D": "Use the fan-out pattern with each stage processing the original document independently"
+    },
+    "answer": "B",
+    "explanation": "Prompt chaining is the correct pattern when stages have sequential dependencies — each step's output is required as input for the next. Parallelization only works when tasks are independent. Here, classification depends on extracted entities, and summarization depends on the classification. Prompt chaining gives each stage a focused prompt, better error handling at each step, and clearer debugging. A mega-prompt risks lower quality due to task complexity competing for attention."
+  },
+  {
+    "domain": 2,
+    "scenario": "A team wants to add a PostToolUse hook in Claude Code that automatically runs 'prettier --write' on any file after Claude edits it. They also want a PreToolUse hook that blocks any Bash commands containing 'rm -rf'. The team is unsure how hooks interact with Claude's workflow.",
+    "question": "How do Claude Code hooks work in this scenario?",
+    "options": {
+      "A": "Hooks are just instructions in CLAUDE.md that Claude follows voluntarily",
+      "B": "PreToolUse hooks run before a tool executes and can block it (exit code non-zero blocks the action); PostToolUse hooks run after a tool completes and can modify output or trigger side effects. Both are deterministic shell commands — they enforce behavior programmatically, not through prompt instructions",
+      "C": "Hooks can only log events; they cannot block or modify tool behavior",
+      "D": "PostToolUse hooks run before the tool, and PreToolUse hooks run after — the naming is counterintuitive"
+    },
+    "answer": "B",
+    "explanation": "Claude Code hooks are shell commands triggered by tool lifecycle events. PreToolUse hooks intercept tool calls before execution — a non-zero exit code blocks the tool call entirely, making them ideal for security guardrails (blocking dangerous commands). PostToolUse hooks run after tool completion and can trigger automated follow-up actions like formatting. Both are deterministic and programmatic, unlike CLAUDE.md instructions which are advisory."
+  },
+  {
+    "domain": 3,
+    "scenario": "A developer wants Claude to output a chain-of-thought reasoning process for a classification task but also needs the final answer in a machine-parseable format. Using extended thinking would work but adds significant token cost. The developer wants a cheaper alternative.",
+    "question": "What prompt engineering technique achieves visible reasoning with structured output without using extended thinking?",
+    "options": {
+      "A": "Set temperature to 0 to force deterministic output",
+      "B": "Use XML tags to structure the response: instruct Claude to write its reasoning inside <reasoning> tags first, then output the final classification inside <answer> tags. The downstream parser extracts only the <answer> block while the reasoning remains available for debugging",
+      "C": "Ask Claude to think step by step and hope the final answer appears last",
+      "D": "Use two separate API calls: one for reasoning and one for the answer"
+    },
+    "answer": "B",
+    "explanation": "XML tags provide a structured way to separate reasoning from final output within a single response. By instructing Claude to use <reasoning>...</reasoning> for its thought process and <answer>...</answer> for the parseable result, you get both human-readable reasoning and machine-parseable output. This is cheaper than extended thinking (reasoning tokens count toward output but avoid the thinking token overhead) and more reliable than hoping for consistent formatting."
   }
 ]

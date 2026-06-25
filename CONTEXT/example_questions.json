@@ -2130,5 +2130,135 @@
     },
     "answer": "B",
     "explanation": "XML tags provide a structured way to separate reasoning from final output within a single response. By instructing Claude to use <reasoning>...</reasoning> for its thought process and <answer>...</answer> for the parseable result, you get both human-readable reasoning and machine-parseable output. This is cheaper than extended thinking (reasoning tokens count toward output but avoid the thinking token overhead) and more reliable than hoping for consistent formatting."
+  },
+  {
+    "domain": 1,
+    "scenario": "A customer support agent built with the Claude Agent SDK handles returns, refunds, and billing disputes. The agent currently processes all request types with a single prompt. Dispute resolution requires accessing a fraud-check API and following a strict compliance workflow, while simple returns only need order lookup. The team notices that dispute handling quality drops when the prompt is overloaded with return-handling instructions.",
+    "question": "What architectural pattern best addresses the quality drop in dispute handling?",
+    "options": {
+      "A": "Add more few-shot examples for disputes to the single prompt",
+      "B": "Use a routing pattern: a lightweight classifier determines request type (return vs. dispute), then routes to specialized agents — one optimized for simple returns, another with the compliance workflow and fraud-check tool for disputes",
+      "C": "Increase the model from Sonnet to Opus for all requests",
+      "D": "Process all requests twice with different prompts and pick the better answer"
+    },
+    "answer": "B",
+    "explanation": "The routing pattern uses a classifier to detect intent and dispatch to specialized agents. This avoids prompt overload by giving each agent a focused instruction set and only the tools it needs. Simple returns get a lightweight agent (potentially cheaper model), while disputes get a compliance-focused agent with fraud-check access. This is the canonical CCA-F customer support scenario pattern."
+  },
+  {
+    "domain": 1,
+    "scenario": "An architect is designing a multi-agent research system where a coordinator agent delegates subtasks to specialized researcher agents. Each researcher runs independently and returns findings. The coordinator must aggregate results and resolve contradictions. During testing, the coordinator's context window fills up because each researcher returns 10,000+ token reports.",
+    "question": "What is the best architectural approach to prevent coordinator context exhaustion?",
+    "options": {
+      "A": "Switch to a model with a larger context window",
+      "B": "Have each researcher agent summarize its findings into a structured brief (500 tokens max) before returning to the coordinator, preserving full reports only in the researcher's own context",
+      "C": "Have the coordinator process researchers sequentially so it only holds one report at a time",
+      "D": "Store all reports in a shared database and have the coordinator skip the aggregation step"
+    },
+    "answer": "B",
+    "explanation": "In hub-and-spoke (coordinator-researcher) architectures, subagent isolation is a key design principle. Each researcher should compress its findings into a concise structured summary before returning results to the coordinator. The full report stays within the researcher's context boundary. This prevents N×10K token reports from overwhelming the coordinator's context while preserving the information needed for synthesis and contradiction resolution."
+  },
+  {
+    "domain": 2,
+    "scenario": "A team uses Claude Code in a CI/CD pipeline to auto-review pull requests. The pipeline runs headless (no terminal). During testing, the pipeline hangs indefinitely because Claude Code prompts for user confirmation on a potentially destructive file deletion suggested by the review.",
+    "question": "What configuration prevents the hang while maintaining safety?",
+    "options": {
+      "A": "Pipe 'yes' to stdin so all prompts are auto-approved",
+      "B": "Use the --dangerously-skip-permissions flag to bypass all permission checks",
+      "C": "Run Claude Code with the -p (print/non-interactive) flag and configure an allowlist of permitted tools in the project's settings. Destructive operations should not be in the allowlist — the review should only report findings, not execute changes",
+      "D": "Set a timeout on the CI job so it fails after 5 minutes of inactivity"
+    },
+    "answer": "C",
+    "explanation": "In CI/CD, Claude Code must run non-interactively with -p flag to prevent hanging on permission prompts. The correct approach is to scope the agent's capabilities via an allowlist of safe tools — a code review agent should analyze and report, not execute destructive operations. --dangerously-skip-permissions removes all safety checks (unacceptable in CI). Piping 'yes' auto-approves dangerous actions. A timeout is a band-aid, not a fix."
+  },
+  {
+    "domain": 2,
+    "scenario": "A development team wants to distinguish between project-wide settings (like model preferences and allowed tools) and project-wide instructions (like coding conventions and architectural guidelines). A junior developer puts tool permission allowlists in CLAUDE.md.",
+    "question": "What is wrong with this approach, and where should tool permissions go?",
+    "options": {
+      "A": "Nothing is wrong — CLAUDE.md is the correct place for all configuration",
+      "B": "Tool permission allowlists are settings, not instructions. They belong in .claude/settings.json (or settings.local.json for personal overrides). CLAUDE.md is for natural-language instructions that guide Claude's behavior, coding style, and project conventions — not for structured configuration like permissions",
+      "C": "Tool permissions should go in package.json under a 'claude' key",
+      "D": "Tool permissions can only be set interactively and cannot be persisted"
+    },
+    "answer": "B",
+    "explanation": "CLAUDE.md files contain natural-language instructions and conventions. Structured configuration — tool permission allowlists, model preferences, MCP server declarations — belongs in .claude/settings.json (shared/committed) or settings.local.json (personal/gitignored). Conflating the two leads to unreliable behavior since CLAUDE.md instructions are advisory (Claude interprets them), while settings.json entries are enforced programmatically."
+  },
+  {
+    "domain": 3,
+    "scenario": "A developer builds a data extraction pipeline that calls the Claude API to parse invoices into JSON. Occasionally the API returns a JSON response with a missing required field (e.g., 'total_amount' is null when it should always be present). The developer wants to fix this without switching models or increasing cost significantly.",
+    "question": "What is the most effective pattern to ensure complete, valid JSON output?",
+    "options": {
+      "A": "Add 'please make sure all fields are present' to the prompt",
+      "B": "Implement a validation-retry loop: validate the parsed JSON against the schema after each API call, and if validation fails, re-call the API with the original input plus the validation error as feedback so Claude can self-correct",
+      "C": "Use a regex to insert default values for missing fields",
+      "D": "Run the extraction twice and merge the results"
+    },
+    "answer": "B",
+    "explanation": "The validation-retry loop is the production-grade pattern for reliable structured output. After each extraction, validate the response against the JSON schema. If validation fails, construct a follow-up prompt containing the original input, the invalid output, and the specific validation error. Claude can then self-correct with targeted feedback. This typically succeeds in 1-2 retries and is far more reliable than vague prompt instructions or post-processing hacks."
+  },
+  {
+    "domain": 3,
+    "scenario": "An architect is designing a system prompt for a customer-facing agent that handles both product inquiries and account management. The agent must always identify itself as 'Acme Assistant', refuse to discuss competitor products, and format monetary values with two decimal places. The initial system prompt is a long paragraph mixing identity, behavior rules, and formatting requirements.",
+    "question": "How should the system prompt be restructured for maximum reliability?",
+    "options": {
+      "A": "Keep it as a single paragraph — Claude handles unstructured prompts well",
+      "B": "Use XML-tagged sections to separate concerns: <identity> for the agent's name and persona, <rules> for behavioral constraints (no competitor discussion), and <formatting> for output format requirements. Place the most critical constraints (identity, refusal rules) early in the prompt",
+      "C": "Move all rules to the user message instead of the system prompt",
+      "D": "Use numbered bullet points without any structural tags"
+    },
+    "answer": "B",
+    "explanation": "Structured system prompts with XML-tagged sections improve Claude's adherence to complex multi-faceted instructions. Separating identity, behavioral rules, and formatting into distinct sections prevents interference between concerns. Placing critical constraints (identity, refusal rules) early takes advantage of primacy effects. This is the recommended system prompt architecture for production agents with multiple behavioral requirements."
+  },
+  {
+    "domain": 4,
+    "scenario": "An MCP server exposes a 'search_database' tool. During testing, Claude sometimes calls the tool with overly broad queries (e.g., SELECT * with no WHERE clause) that return thousands of rows and overwhelm the context window. The developer wants to prevent this without removing the tool entirely.",
+    "question": "What is the best tool design approach to prevent context-overwhelming results?",
+    "options": {
+      "A": "Truncate results server-side to 100 rows and hope Claude doesn't need more",
+      "B": "Design the tool with built-in guardrails: require filter parameters in the schema (mark them as required, not optional), enforce a max_results parameter with a sensible default, and include pagination support. Update the tool description to explain that broad queries will be rejected",
+      "C": "Remove the tool and have the user paste database results manually",
+      "D": "Use a smaller model that generates shorter queries"
+    },
+    "answer": "B",
+    "explanation": "Well-designed tool schemas prevent misuse at the interface level. Making filter parameters required forces Claude to scope queries. A max_results parameter with a sensible default caps response size. Pagination support lets Claude retrieve more data incrementally if needed. The tool description should clearly communicate constraints so Claude can plan its queries appropriately. This is the 'tool boundaries' principle — tools should be self-documenting and self-limiting."
+  },
+  {
+    "domain": 4,
+    "scenario": "A team is building an MCP server for their internal knowledge base. They want Claude to be able to both (1) browse a list of available knowledge base categories and (2) execute a full-text search across documents. The team implements both as MCP tools. A reviewer points out that one of these should not be a tool.",
+    "question": "Which capability should be a resource instead of a tool, and why?",
+    "options": {
+      "A": "Full-text search should be a resource because it returns data",
+      "B": "Both should remain as tools — resources are only for static files",
+      "C": "Browsing the category list should be an MCP resource (it is a read-only data listing that Claude can discover and inspect without side effects), while full-text search should remain a tool (it requires dynamic parameters and performs a computation)",
+      "D": "Both should be resources since neither modifies data"
+    },
+    "answer": "C",
+    "explanation": "MCP distinguishes between resources (data exposed for reading — like files, database records, or category listings) and tools (actions that take parameters and perform computation or side effects). A category listing is a stable, browsable dataset — a natural fit for a resource with a URI like kb://categories. Full-text search requires dynamic input (the query) and computation — a natural fit for a tool. This distinction matters because resources can be pre-fetched and cached, while tools are invoked on demand."
+  },
+  {
+    "domain": 5,
+    "scenario": "A production RAG (Retrieval-Augmented Generation) system retrieves document chunks to answer user questions. Users report that the agent sometimes confidently states information that contradicts the retrieved documents, or synthesizes claims that aren't supported by any retrieved chunk.",
+    "question": "What is the best architectural approach to reduce hallucinated citations and unsupported claims?",
+    "options": {
+      "A": "Increase the number of retrieved chunks from 5 to 50 to ensure relevant information is always present",
+      "B": "Add a grounding instruction in the system prompt requiring Claude to cite specific chunk IDs for every factual claim, and include a post-generation verification step that checks each citation against the retrieved chunks. If a claim has no valid citation, flag it as unverified",
+      "C": "Switch to a larger model — hallucination is purely a model capability issue",
+      "D": "Remove the RAG system and rely on Claude's training data instead"
+    },
+    "answer": "B",
+    "explanation": "Information provenance is critical in RAG systems. Requiring explicit citations (chunk IDs) for every claim forces Claude to ground its responses in retrieved evidence. A post-generation verification step catches hallucinated or unsupported claims by validating that cited chunks actually contain the claimed information. Increasing chunk count often worsens the problem by adding noise. This is the 'cite-then-verify' pattern recommended for production RAG reliability."
+  },
+  {
+    "domain": 5,
+    "scenario": "A team has built a Claude-powered agent and runs evaluations by manually reviewing 20 outputs per week. Their evaluation criteria are subjective ('is the response good?'). The agent performs well in evaluations but receives negative user feedback in production. A senior architect reviews their evaluation process.",
+    "question": "What are the two main problems with this evaluation approach?",
+    "options": {
+      "A": "The sample size is too small, and the evaluation criteria are too vague. Production-grade evaluation requires (1) a statistically meaningful sample size with diverse edge cases and (2) specific, measurable criteria (factual accuracy, format compliance, latency, tool-call correctness) rather than subjective judgments",
+      "B": "Manual review is inherently invalid — only automated evaluation is trustworthy",
+      "C": "The issue is that evaluations should only be done by the end users, not the development team",
+      "D": "Twenty samples per week is sufficient; the problem is that users have unrealistic expectations"
+    },
+    "answer": "A",
+    "explanation": "Two classic evaluation anti-patterns: (1) insufficient sample size — 20 hand-picked examples cannot represent the distribution of production inputs, missing edge cases and adversarial inputs; (2) vague criteria — 'is it good?' allows evaluator bias and makes it impossible to track improvements systematically. Production evaluation requires specific rubrics (accuracy, format compliance, safety) applied to representative samples, ideally combining automated checks with structured human review on a statistically meaningful sample."
   }
 ]

@@ -2,6 +2,32 @@
 
 Running log of CCA-F hands-on practice drills (newest first).
 
+## 2026-06-25 · Day 18 · D5 Context — week-long migration agent memory layout
+
+**Drill:** Create `DRILLS/day18_memory_layout.md`. Design the on-disk **memory layout** for an agent running a **week-long Salesforce org-to-org metadata migration** (objects, flows, Apex, profiles) that is compacted repeatedly and may crash/resume. Specify 4–6 files; for each give name + one-line purpose + contents + when written vs read. Add a section on what stays in the live context window (and may be lost on compaction). Exercises Day-18 context engineering: compaction + re-pinning rules, externalized state, subagent isolation (digests not transcripts), and pre-load vs JIT.
+
+**Acceptance criteria:**
+- [ ] `DRILLS/day18_memory_layout.md` exists with 4–6 files, each having name + purpose + contents + write/read timing.
+- [ ] Exactly one file is the **durable progress/state** ledger (e.g. `progress.json`) that survives compaction and enables resume — states what a resuming agent reads first.
+- [ ] ≥1 file captures **standing rules/constraints** that must be **re-pinned after compaction** (e.g. "no prod deploy without human approval").
+- [ ] ≥1 file holds **subagent outputs** as distilled per-object digests — orchestrator stores summaries, not raw worker transcripts.
+- [ ] "Live context window" section names ≥2 things safely lost on compaction (tool-call chatter, intermediate reasoning).
+- [ ] One sentence distinguishing **pre-load vs JIT** for ≥1 file (what is fetched on demand vs kept resident).
+- [ ] Stretch: a "compaction checklist" — 3 bullets the agent runs each compaction (summarize done → re-pin rules → flush state to disk).
+
+## 2026-06-24 · Day 17 · D4 MCP — Salesforce write-server risk register
+
+**Drill:** Create `DRILLS/day17_sfdc_security.md`. For an MCP server with **write** access to Salesforce (create/update/delete records, send email), produce a risk register of the **top 3 risks**, each with (a) a concrete Salesforce-context attack scenario, (b) one mitigation, (c) the MCP layer the mitigation lives at (tool schema / auth / host policy / server config). Exercises the Day-17 MCP security threat model: prompt injection via tool output, confused deputy / over-privilege, token theft, malicious servers — plus the cross-cutting human-approval rule for destructive writes.
+
+**Acceptance criteria:**
+- [ ] `DRILLS/day17_sfdc_security.md` exists with exactly 3 risks, each having scenario + mitigation + layer.
+- [ ] Risks span distinct threat classes (not 3 variants of one) — e.g. one injection, one confused-deputy/over-privilege, one destructive-write/token issue.
+- [ ] ≥1 risk names a **Salesforce-specific** mechanism (integration user with *Modify All Data*, sharing rules, poisoned `Case.Description`, Apex side effects).
+- [ ] Confused-deputy mitigation ties to **per-user OAuth identity** so SFDC sharing & profile permissions are enforced (not one shared admin token).
+- [ ] ≥1 mitigation routes **destructive writes** (bulk delete/update, mass email) through **human approval**.
+- [ ] Footnote: why tool output is untrusted even from your *own* org.
+- [ ] Stretch: residual-likelihood rating (L/M/H) per risk + the single control to ship first.
+
 ## 2026-06-22 · Day 15 · D4 MCP — transport & auth decision table
 
 **Drill:** Create `DRILLS/day15_transport_table.md` — a decision table for 4 deployment scenarios (local CLI wrapper; company-hosted multi-rep Salesforce server; ephemeral CI Jira server; public partner analytics server needing resume). For each, pick **transport** (stdio / Streamable HTTP) + **auth** (env var / OAuth 2.1 / bearer) + one-line justification. Add a footnote on what replaced SSE and why a 2025-era design shouldn't pick it. Reinforces the SSE-vs-Streamable-HTTP trap (Max's only Day-6 quiz miss).

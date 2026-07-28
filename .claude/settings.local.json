@@ -48,7 +48,8 @@
       "WebFetch(domain:dynamicbalaji.medium.com)",
       "WebFetch(domain:newsletter.bigtechcareers.com)",
       "WebFetch(domain:claudecertificationguide.com)",
-      "WebFetch(domain:proftia.com)"
+      "WebFetch(domain:proftia.com)",
+      "WebFetch(domain:www.lowcode.agency)"
     ]
   },
   "hooks": {

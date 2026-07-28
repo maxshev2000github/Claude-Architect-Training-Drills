@@ -3418,5 +3418,135 @@
     },
     "answer": "B",
     "explanation": "A fallback cascade provides graceful degradation under rate pressure. Simple requests that Haiku can handle are routed to the cheaper, less-contended tier, preserving service availability. Complex requests that require Sonnet are queued for delayed processing rather than failing outright. This maintains service for users while respecting rate limits. More retries (A) compound the rate limit pressure without adding capacity. Caching (C) returns stale or incorrect results for dynamic requests. Switching entirely to Haiku (D) sacrifices quality permanently for a transient capacity issue."
+  },
+  {
+    "domain": 1,
+    "scenario": "A customer support agent includes a refund_process tool that debits the company account. Business rules require that customer identity must be verified before any refund is issued. A developer implements this requirement by adding 'Always verify identity before processing refunds' to the system prompt.",
+    "question": "What is the most reliable way to enforce the identity-verification-before-refund sequence?",
+    "options": {
+      "A": "Add a programmatic prerequisite that blocks the refund tool from executing until the identity verification step has succeeded",
+      "B": "Increase the prompt emphasis by adding the instruction three times in the system prompt",
+      "C": "Use a higher-capability model that follows instructions more reliably",
+      "D": "Log all refund calls and review them manually at end of day"
+    },
+    "answer": "A",
+    "explanation": "For mandatory sequences with financial consequences, programmatic enforcement is the only reliable approach. A prerequisite gate that blocks the refund tool until verification succeeds provides deterministic guarantees. Prompt-based instructions (B) are probabilistic and can be bypassed or ignored. Using a stronger model (C) reduces but does not eliminate the risk. Manual review (D) catches violations after the fact but does not prevent them."
+  },
+  {
+    "domain": 1,
+    "scenario": "An architect is stress-testing a multi-agent system where an orchestrator delegates tasks to worker subagents. During testing, one configuration causes the orchestrator to enter an infinite loop — it keeps calling the same tool repeatedly without making progress toward the goal.",
+    "question": "Which combination of safeguards most effectively prevents infinite loops in production?",
+    "options": {
+      "A": "Set a very high token budget so the agent has room to eventually converge",
+      "B": "Implement an iteration counter with a hard limit in the runner script, combined with optimized tool output schemas that give the agent clear progress signals",
+      "C": "Add 'Do not loop infinitely' to the system prompt",
+      "D": "Monitor logs manually and kill the process when a loop is detected"
+    },
+    "answer": "B",
+    "explanation": "Infinite loop prevention requires both a hard safety net (iteration counter with a maximum turn limit in the runner script) and root-cause mitigation (optimized tool outputs that give the agent clear signals about task progress and completion). A high token budget (A) just makes infinite loops more expensive. Prompt instructions (C) are not deterministic safeguards. Manual monitoring (D) is too slow and does not scale."
+  },
+  {
+    "domain": 2,
+    "scenario": "A team wants to allow 'npm test' and 'npm run build' to execute without approval prompts in Claude Code, while requiring explicit approval for all other Bash commands. This policy must apply consistently to all developers on the project.",
+    "question": "Where should this permission configuration be defined?",
+    "options": {
+      "A": "In each developer's ~/.claude/settings.json file",
+      "B": "In the project's .claude/settings.json file, committed to version control",
+      "C": "In .claude/settings.local.json so each developer can customize it",
+      "D": "In the project CLAUDE.md file as a natural-language instruction"
+    },
+    "answer": "B",
+    "explanation": "Project-level .claude/settings.json is the correct location for team-wide permission policies. It is committed to version control and applies consistently to all developers who clone the repository. User-level ~/.claude/settings.json (A) is per-machine and cannot enforce team policy. settings.local.json (C) is for personal, machine-specific settings that should not be shared. CLAUDE.md (D) provides guidance to Claude but does not configure permission allowlists — that requires the settings.json structure."
+  },
+  {
+    "domain": 2,
+    "scenario": "A developer is working on a complex refactoring that will touch 60+ files across multiple modules. They want Claude Code to first analyze the full scope of changes, identify dependencies, and propose a plan before making any modifications.",
+    "question": "What is the most appropriate Claude Code workflow for this task?",
+    "options": {
+      "A": "Start directly in execution mode and let Claude Code figure out the scope as it goes",
+      "B": "Use Plan Mode to have Claude analyze the codebase, identify affected files and dependencies, and produce a structured plan — then switch to execution mode to implement the approved plan",
+      "C": "Split the work into 60 separate single-file requests to keep each task simple",
+      "D": "Write the refactoring plan manually in a document and paste it into Claude Code as instructions"
+    },
+    "answer": "B",
+    "explanation": "Plan Mode is specifically designed for large-scale changes involving many files where understanding the full scope before acting is critical. It allows Claude to analyze the codebase, map dependencies, and propose a structured approach without making premature changes. After reviewing and approving the plan, switching to execution mode ensures changes align with the approved strategy. Direct execution (A) on 60+ files risks inconsistent changes. Splitting into 60 requests (C) loses cross-file context. Manual planning (D) wastes time when Claude can analyze the codebase directly."
+  },
+  {
+    "domain": 3,
+    "scenario": "A developer is building a document classification pipeline. The system prompt instructs Claude to classify documents into categories and return JSON. In production, Claude occasionally returns markdown-formatted explanations instead of pure JSON, breaking the downstream parser.",
+    "question": "Which technique provides the strongest guarantee of consistent JSON output?",
+    "options": {
+      "A": "Add 'IMPORTANT: Return only JSON, no markdown' to the system prompt",
+      "B": "Combine assistant-turn prefilling with '{', a stop sequence after the closing '}', and a JSON schema definition to structurally constrain the output",
+      "C": "Set temperature to 0 to make outputs deterministic",
+      "D": "Wrap the entire prompt in XML tags to improve instruction following"
+    },
+    "answer": "B",
+    "explanation": "Structural constraints provide the strongest JSON guarantees. Prefilling the assistant turn with '{' forces Claude into JSON generation mode. A stop sequence after '}' prevents trailing text. A JSON schema definition specifies the exact structure expected. Together, these three mechanisms make non-JSON output nearly impossible. Prompt emphasis (A) improves compliance but is not deterministic. Temperature=0 (C) makes outputs more deterministic but does not prevent format errors. XML tags (D) improve structure but do not constrain output format."
+  },
+  {
+    "domain": 3,
+    "scenario": "An architect is designing a multi-turn conversational agent. After 15-20 turns, the agent begins ignoring key constraints from the system prompt — it starts using casual language despite being instructed to maintain a formal tone, and occasionally omits required disclaimers.",
+    "question": "What is the root cause and best mitigation for this system prompt drift?",
+    "options": {
+      "A": "The system prompt is too long and should be shortened to improve adherence",
+      "B": "Multi-turn conversations dilute system prompt influence as user messages accumulate; re-inject critical constraints at strategic points in the conversation and use prompt caching to keep the system prompt prominent",
+      "C": "Switch to a larger model that can handle longer conversations without drift",
+      "D": "Limit all conversations to 10 turns maximum to prevent drift"
+    },
+    "answer": "B",
+    "explanation": "System prompt drift is a well-known phenomenon in multi-turn conversations. As user and assistant messages accumulate, the relative influence of the system prompt diminishes. The mitigation is to periodically re-inject key constraints at strategic points (e.g., in user-turn prefixes or via assistant prefills) and use prompt caching to ensure the system prompt remains consistently processed. Shortening the prompt (A) may lose important instructions. A larger model (C) may help but does not address the structural issue. Hard turn limits (D) are unnecessarily restrictive."
+  },
+  {
+    "domain": 4,
+    "scenario": "An MCP server exposes two tools: 'get_customer_record' (retrieves a customer's full profile by ID) and 'search_customers' (searches customers by name or email). During testing, Claude frequently calls 'get_customer_record' when it should use 'search_customers', especially when the user provides a name instead of an ID.",
+    "question": "What is the most effective fix for this tool misrouting?",
+    "options": {
+      "A": "Rename the tools to 'tool_1' and 'tool_2' to avoid confusion",
+      "B": "Remove the search tool and have 'get_customer_record' handle both use cases",
+      "C": "Rewrite the tool descriptions to clearly specify each tool's purpose, expected inputs, and when NOT to use it — e.g., 'Retrieves a customer profile given a numeric customer ID. Do NOT use for name or email lookups; use search_customers instead.'",
+      "D": "Add a system prompt instruction listing which tool to use for each scenario"
+    },
+    "answer": "C",
+    "explanation": "Tool descriptions are the primary mechanism Claude uses for tool selection. Clear descriptions that specify purpose, expected input types, and negative guidance ('Do NOT use for...') help Claude disambiguate between similar tools. Generic or ambiguous descriptions are the most common cause of tool misrouting. Renaming to generic names (A) makes the problem worse. Merging tools (B) creates an overly complex tool. System prompt instructions (D) help but are less reliable than well-written tool descriptions, which Claude evaluates at the point of tool selection."
+  },
+  {
+    "domain": 4,
+    "scenario": "An architect is building an MCP server for a cloud-based analytics platform. Multiple remote clients need to connect simultaneously, and the server must stream large result sets back to clients during real-time data analysis sessions.",
+    "question": "Which MCP transport is most appropriate for this deployment?",
+    "options": {
+      "A": "stdio — it is simpler to implement and debug",
+      "B": "Streamable HTTP (or SSE) — it supports multiple concurrent remote clients and streaming responses over the network",
+      "C": "Raw TCP sockets for maximum throughput",
+      "D": "WebSocket with a custom protocol for bidirectional communication"
+    },
+    "answer": "B",
+    "explanation": "Streamable HTTP (and its predecessor SSE) is designed for remote, multi-client MCP deployments. It supports concurrent connections over standard HTTP infrastructure, enables streaming of large responses, and works through firewalls and load balancers. stdio (A) is limited to local subprocess communication — a single client spawns the server as a child process, making it unsuitable for remote multi-client scenarios. Raw TCP (C) and custom WebSocket protocols (D) are not part of the MCP specification and would require reimplementing transport-layer features that Streamable HTTP provides out of the box."
+  },
+  {
+    "domain": 5,
+    "scenario": "An agentic system is midway through a 12-step workflow when it detects that only 15% of the context window remains. Three critical tool calls are still needed to complete the task. The agent has accumulated detailed intermediate results from the first 9 steps.",
+    "question": "What is the best strategy to complete the remaining work?",
+    "options": {
+      "A": "Abort the task and ask the user to start over with a fresh context window",
+      "B": "Summarize completed steps into a compact state block, discard verbose intermediate results, and continue execution with the freed context space",
+      "C": "Continue without changes and hope the remaining steps fit within the available context",
+      "D": "Switch to a model with a larger context window mid-task"
+    },
+    "answer": "B",
+    "explanation": "Conversation compaction is the recommended strategy when context is running low mid-task. By summarizing completed work into a dense state block and discarding verbose intermediate outputs, the agent frees context space for the remaining steps while preserving task continuity. Aborting (A) wastes all completed work. Continuing without action (C) risks truncation and task failure. Switching models mid-task (D) is operationally complex and may lose context in the transfer."
+  },
+  {
+    "domain": 5,
+    "scenario": "A production system handles 10,000 requests per day, all sharing the same 4,000-token system prompt. Each request adds a short user message (200-500 tokens). The team wants to reduce API costs without changing the system prompt content or degrading response quality.",
+    "question": "Which optimization provides the largest cost reduction for this workload?",
+    "options": {
+      "A": "Switch all requests to a smaller, cheaper model",
+      "B": "Use prompt caching with cache_control breakpoints to cache the static system prompt, so it is only billed once at write time and subsequent requests pay the reduced cached-read rate",
+      "C": "Shorten the system prompt to 1,000 tokens by removing important instructions",
+      "D": "Batch all 10,000 requests into a single API call"
+    },
+    "answer": "B",
+    "explanation": "Prompt caching is purpose-built for this pattern: a large, static prompt prefix shared across many requests. By marking the system prompt with cache_control breakpoints, the first request writes it to cache, and all subsequent requests read from cache at a significantly reduced rate (up to 90% cost reduction on cached tokens). With 10,000 requests sharing a 4,000-token prefix, the savings are substantial. Switching to a smaller model (A) may degrade quality. Shortening the prompt (C) removes important instructions. The API does not support batching multiple independent requests into a single call (D) in the way described."
   }
 ]

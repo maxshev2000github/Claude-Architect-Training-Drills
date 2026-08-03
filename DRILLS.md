@@ -2,6 +2,19 @@
 
 Running log of CCA-F hands-on practice drills (newest first).
 
+## 2026-07-31 · Cycle 2 · Day 26 · Full-domain rapid review — shaky-item triage (all 5 domains)
+
+**Drill:** Create `DRILLS/day_c2d26_rapid_review.md`. Using the all-domain key-fact sheet in `CCA-F_Daily_2026-07-31.md` (Cowork outputs; condensed from `CONTEXT/flashcards.md`), cover each of the ~28 key-fact prompts, recall from memory, and mark ✓ (solid) or ✗ (shaky) **before** peeking. For every ✗, write one line: the correct fact **and** its trap-family {over-engineering, deterministic-vs-probabilistic enforcement, reliability-ranking, transport/auth, silent-failure/false-green, escalation-anti-triggers, parallelization-vs-orchestrator}. This produces the targeted study list ahead of tomorrow's Day-27 mini-mock. Exercises Cycle-2 Day-26 D-all: whole-syllabus recall under the traps the exam favors.
+
+**Acceptance criteria:**
+- [ ] `DRILLS/day_c2d26_rapid_review.md` exists, covering all 5 domains.
+- [ ] Each of the ~28 key-fact prompts marked ✓ or ✗ from memory **before** verifying against the sheet / `flashcards.md`.
+- [ ] Every ✗ has the correct fact + a named **trap-family** from the set above.
+- [ ] A "Day-27 focus" line names the 1–2 weakest domains, cross-checked against the `TRAINING_PROGRAM.md` Scoring log.
+- [ ] Sanity-check the two highest-value traps are marked ✓: **SSE is legacy / Streamable HTTP replaced it** (D4) and **silent failure is the worst mode** (D5) — if either is ✗, star it as a mini-mock risk.
+- [ ] Score row added to the `TRAINING_PROGRAM.md` Scoring log (Day 26, rapid review).
+- [ ] Stretch: any prompt marked ✓ *but only barely* is flagged as a "brittle" item to re-drill before the mock — these are the real mini-mock risks.
+
 ## 2026-07-27 · Cycle 2 · Day 22 · D1 Agentic Architecture — orchestration pattern matching
 
 **Drill:** Create `DRILLS/day_c2d22_pattern_match.md`. Match five business scenarios to the single best orchestration pattern from the five-pattern taxonomy (prompt chaining, routing, parallelization/fan-out, orchestrator-worker, evaluator-optimizer), with a one-line justification and the pattern you rejected for each. Exercises Cycle-2 Day-22 D1: choosing the *simplest sufficient* pattern, and the two exam traps (chaining vs orchestrator-worker = known vs runtime-discovered steps; fan-out vs orchestrator-worker = predefined vs dynamic subtasks). Salesforce-flavored scenarios encouraged.

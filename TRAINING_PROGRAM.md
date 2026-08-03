@@ -153,4 +153,4 @@ Score by domain. Next cycle: swap one deep-block week to your weakest domain.
 ## Integration
 
 - The `cca-f-daily-tutor` scheduled task (8am) should follow this program day-by-day and log drills to `DRILLS.md`.
-- Cycle position: track it here → **Current: Cycle 2, Day 22 (2026-07-27)**. *(Cycle 1 wrapped 2026-07-05; the Day 28 retro did not run, so a condensed retro + Cycle-2 plan is in `CCA-F_Daily_2026-07-06.md` §0 — Cycle 2 front-loads D4 MCP transport/security per the one confirmed weak point.)*
+- Cycle position: track it here → **Current: Cycle 2, Day 26 (2026-07-31)**. *(Cycle 1 wrapped 2026-07-05; the Day 28 retro did not run, so a condensed retro + Cycle-2 plan is in `CCA-F_Daily_2026-07-06.md` §0 — Cycle 2 front-loads D4 MCP transport/security per the one confirmed weak point.)*

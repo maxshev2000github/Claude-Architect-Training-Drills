@@ -5379,5 +5379,254 @@
     },
     "answer": "A",
     "explanation": "A context-window-exceeded condition is deterministic: the request is too large, so an identical resubmission fails identically no matter how long you wait. Recovery requires shrinking the input - trimming or clearing superseded tool results and carrying forward distilled durable state - and resuming. B is the classic mistake of applying transient-error handling to a deterministic one. C reduces the output budget, which does not address an input that already exceeds the window, and can truncate the answer. D splits the message while leaving the accumulated history in place, so both halves still carry the oversized context. Classify errors as retryable or not before choosing a recovery strategy."
+  },
+  {
+    "domain": 1,
+    "scenario": "An interactive triage agent must classify an incoming support ticket before replying to the customer in the same session. To cut cost, an architect routes the classification step through the Message Batches API and has the orchestrator poll for the batch result before continuing the conversation.",
+    "question": "Why is this design flawed?",
+    "options": {
+      "A": "The Batches API cannot perform classification tasks — it only supports text generation",
+      "B": "Batch processing has unpredictable completion latency and is unsuitable for a blocking step in an interactive path; batch is for offline, non-blocking workloads, so this step should use a standard synchronous request",
+      "C": "Batch requests cannot use a system prompt, so classification accuracy will drop",
+      "D": "The orchestrator should submit the batch twice and use whichever result returns first"
+    },
+    "answer": "B",
+    "explanation": "Using the Batches API for a blocking workflow is a recognized anti-pattern. Batch jobs trade latency guarantees for cost savings — completion time is unpredictable, so any step a user is waiting on must not depend on one. Batch is correct for offline, non-blocking volume work (bulk classification, backfills, evaluation runs). The cost saving does not justify holding an interactive session open on an unbounded wait."
+  },
+  {
+    "domain": 1,
+    "scenario": "A planner agent running on a large model emits extended thinking blocks while decomposing a task. To save cost, the orchestrator forwards the planner's raw assistant turns — including the thinking blocks — into a smaller executor model's message history for the implementation step.",
+    "question": "What is the architectural problem with this handoff?",
+    "options": {
+      "A": "Thinking blocks are bound to the model and message history that produced them and are not portable into a different model's context; the orchestrator should pass a distilled, plain-text plan as the executor's input",
+      "B": "Thinking blocks are always stripped automatically, so the handoff is a no-op",
+      "C": "Smaller models ignore thinking blocks, so the only cost is wasted tokens",
+      "D": "Thinking blocks must be re-signed by the orchestrator before reuse in any model"
+    },
+    "answer": "A",
+    "explanation": "Extended thinking blocks carry signatures tied to the model and the exact history that generated them; replaying them into a different model's context is not a supported handoff. The correct pattern is the same one that governs all subagent coordination: the coordinator extracts the durable artifact — the plan, the decision, the constraints — and packs it as an explicit, self-contained input for the next agent. Internal reasoning traces are an implementation detail of the producing turn, not an interchange format.",
+    "relevance": "medium",
+    "relevance_note": "Model-specific thinking-block binding rules sourced from a community study guide (Sept 2026); verify against current platform docs."
+  },
+  {
+    "domain": 1,
+    "scenario": "A document-analysis orchestrator routes by cost: small jobs to the cheapest small model, everything else to a mid-tier model. A new customer submits a 350,000-token contract bundle for whole-corpus consistency checking. The cheap model's tier has a 200K context window. The job fails at dispatch.",
+    "question": "What is the correct fix?",
+    "options": {
+      "A": "Retry the same model with a higher max_tokens value",
+      "B": "Make the routing rule context-aware: estimate input size first, and route payloads that exceed a candidate model's context window to a larger-context model, or decompose the corpus into per-document passes with a reduce step",
+      "C": "Disable the cost-routing layer and always use the largest model",
+      "D": "Truncate the bundle to the first 200,000 tokens and note the truncation in the output"
+    },
+    "answer": "B",
+    "explanation": "Model routing must be capability-aware, not cost-aware alone: context window is a hard constraint that has to be checked before dispatch. Two valid resolutions exist — route to a larger-context model, or decompose into chunk-level passes plus a reduce step when whole-corpus reasoning can be expressed that way. Always using the largest model discards the cost benefit for the majority of jobs, and silently truncating produces a confidently wrong consistency check, which is worse than failing."
+  },
+  {
+    "domain": 1,
+    "scenario": "A multi-stage pipeline requires that a compliance-scan stage always complete before a publish stage. The architect encodes this by writing 'Run the compliance scan first, then publish' into the orchestrator agent's system prompt. In production, roughly 2% of runs publish before scanning.",
+    "question": "What does this failure illustrate, and what is the fix?",
+    "options": {
+      "A": "The model is under-trained on the domain; fine-tune it on compliant run traces",
+      "B": "Prompts express preference, not guarantee — mandatory stage ordering belongs in orchestrator control flow, where the publish stage is unreachable until the scan stage returns success",
+      "C": "The instruction is too short; restate the ordering requirement in the user message on every turn",
+      "D": "Raise the temperature so the model explores the correct ordering more often"
+    },
+    "answer": "B",
+    "explanation": "A core exam principle: prompts are suggestions, code is enforcement. Any requirement with a compliance or safety consequence must be enforced deterministically in the orchestration layer — sequence the stages in code so publish is structurally unreachable until the scan returns success. Prompt restatement, larger models, and sampling changes all shift the failure rate without eliminating it; a 2% violation rate on a compliance gate is an architecture defect, not a prompting defect."
+  },
+  {
+    "domain": 2,
+    "scenario": "A monorepo has a root CLAUDE.md describing repo-wide conventions. The packages/api directory uses a different test runner and stricter migration rules than the rest of the repo. Developers keep having to restate those API-specific rules in chat when working in that directory.",
+    "question": "What is the correct configuration approach?",
+    "options": {
+      "A": "Add a packages/api/CLAUDE.md containing only the API-specific rules; it layers onto the root file when Claude works in that subtree, with the more specific file taking precedence on conflicts",
+      "B": "Move all API-specific rules into the root CLAUDE.md guarded by an 'if working in packages/api' instruction",
+      "C": "Put the API rules in ~/.claude/CLAUDE.md so they are always loaded",
+      "D": "Create a slash command that developers must run before touching packages/api"
+    },
+    "answer": "A",
+    "explanation": "The Claude Code memory hierarchy supports per-directory CLAUDE.md files that compose with parent-level files, with the more specific file winning on conflicts. Scoping the API rules to packages/api keeps them out of context for unrelated work and removes the need for conditional instructions. Stuffing conditionals into the root file bloats every session's context; the user-level file is personal and would not reach teammates; and a manually invoked command reintroduces the human step the configuration is meant to eliminate."
+  },
+  {
+    "domain": 2,
+    "scenario": "A team has a six-step incident-postmortem procedure with its own templates and checklists. They want Claude to follow it whenever a postmortem is being written, without anyone having to remember to trigger it, and the procedure is too long to keep permanently in CLAUDE.md.",
+    "question": "Which Claude Code mechanism fits this requirement?",
+    "options": {
+      "A": "A custom slash command, since it can hold arbitrary length",
+      "B": "A skill in .claude/skills/, which is discovered by its description and loaded on demand when the task matches — unlike a slash command, which the user must explicitly invoke",
+      "C": "A PreToolUse hook that injects the procedure before every tool call",
+      "D": "A second CLAUDE.md in the repo root containing the full procedure"
+    },
+    "answer": "B",
+    "explanation": "Skills and slash commands differ in who invokes them: a skill is model-invoked — Claude matches the task against the skill's description and loads its instructions on demand — while a slash command is user-invoked. A procedure that should activate automatically on a matching task, and that is too large to hold in always-loaded memory, is exactly the skill use case. Hooks are deterministic event handlers for enforcement, not a content-delivery mechanism, and putting the full procedure in CLAUDE.md pays its token cost in every session."
+  },
+  {
+    "domain": 2,
+    "scenario": "An engineer builds a well-tested skill for the team's release process and saves it under ~/.claude/skills/release/. It works perfectly for them. Teammates who pull the repo report that Claude never uses the release procedure.",
+    "question": "What is the cause and the correct remediation?",
+    "options": {
+      "A": "Skills must be registered in settings.json before they can be discovered",
+      "B": "The skill is in the user-level directory, which is personal to that machine; move it to the project's .claude/skills/ directory and commit it so it ships with the repo",
+      "C": "Teammates need to restart Claude Code to pick up new skills from the shared cache",
+      "D": "Skills only load when invoked by name, so teammates must type the skill name explicitly"
+    },
+    "answer": "B",
+    "explanation": "The same personal-versus-project scoping that governs CLAUDE.md applies to skills: ~/.claude/skills/ is user-level and machine-local, while <project>/.claude/skills/ is version-controlled and shared with everyone who clones the repo. Anything representing a team standard belongs in the project scope and in git. This mirrors the classic exam trap of team conventions written into a personal memory file and therefore invisible to teammates."
+  },
+  {
+    "domain": 3,
+    "scenario": "A single prompt asks Claude to draft a security advisory, critique its own draft against a checklist, and emit the final revised advisory in one response. Reviewers find the critiques are shallow and rarely change the final text.",
+    "question": "What is the most effective restructuring?",
+    "options": {
+      "A": "Split the work into separate passes — generate the draft in one call, then run a review call whose only job is to produce structured findings against the checklist, then a revision call that takes the draft plus findings as input",
+      "B": "Add 'be very critical' to the prompt and increase max_tokens",
+      "C": "Ask for the critique first and the draft second within the same response",
+      "D": "Lower the temperature so the critique is more deterministic"
+    },
+    "answer": "A",
+    "explanation": "Multi-pass review works because each pass gets a single objective and clean inputs. When generation and critique share one response, the critique is conditioned on the text just produced and tends to ratify it, so the revision changes little. Separating the passes lets the review call be scored against explicit checklist criteria and produce structured findings, which the revision call then consumes as data. Reordering within one response or adjusting sampling does not create the independence that makes review useful."
+  },
+  {
+    "domain": 3,
+    "scenario": "A classification prompt includes four few-shot examples. All four are short, single-paragraph inputs that resolve to the same category. In production, long multi-topic inputs and minority categories are classified poorly.",
+    "question": "What is the problem with the example set?",
+    "options": {
+      "A": "Four examples is too few; accuracy scales with example count, so add twenty more of the same kind",
+      "B": "The examples lack diversity — they cover one category and one input shape, so they teach format rather than decision boundaries; use a small set of diverse examples spanning the categories and input shapes that actually occur, including edge cases",
+      "C": "Few-shot examples should never be used for classification; rely on the schema alone",
+      "D": "The examples should be moved to the end of the prompt, after the input"
+    },
+    "answer": "B",
+    "explanation": "Example quality is about coverage of the decision boundary, not volume. A handful of diverse examples that span the label set, the realistic input shapes, and the hard edge cases outperforms a larger set of near-identical ones, which effectively demonstrates only formatting. Adding more homogeneous examples deepens the bias and spends context; the fix is to make the set representative of the distribution the classifier will actually see."
+  },
+  {
+    "domain": 3,
+    "scenario": "A high-volume extraction service asks Claude to 'return only valid JSON matching this shape' and repeats the instruction in both the system prompt and the user turn. Roughly 3% of responses still fail the downstream parser — usually stray prose, a trailing comment, or an invented optional field.",
+    "question": "How should the architect close the remaining failure tail?",
+    "options": {
+      "A": "Repeat the JSON instruction a third time and add all-caps emphasis",
+      "B": "Enforce the contract structurally instead of by instruction: define the output as a tool/schema so the shape is constrained, validate every response against that schema, and on failure retry with the specific validation error fed back to Claude",
+      "C": "Accept the 3% loss and log the failures for manual repair",
+      "D": "Post-process with a regular expression that strips anything outside the outermost braces"
+    },
+    "answer": "B",
+    "explanation": "Prompt-only JSON enforcement is a named anti-pattern: instructions shape the distribution but never guarantee the contract, so a tail always remains no matter how emphatically they are repeated. The reliable design is schema-constrained output plus programmatic validation, with a bounded retry that returns the actual validation error so the next attempt is corrective rather than another blind sample. Regex salvage hides malformed data as plausible-looking records, and silently accepting a 3% loss is a data-integrity decision, not an engineering fix."
+  },
+  {
+    "domain": 4,
+    "scenario": "A developer adds an MCP server that uses their own personal API token for a third-party service they alone are licensed for. They want it available in every repo they work in, but it must not appear in any teammate's environment or in the repo.",
+    "question": "Which MCP configuration scope is correct?",
+    "options": {
+      "A": "User scope — the server is registered in the developer's personal configuration, so it is available across all their projects and is never committed to the repository",
+      "B": "Project scope via a committed .mcp.json, with the token read from an environment variable",
+      "C": "Project scope with the server disabled by default and enabled locally",
+      "D": "Any scope, as long as the token is stored in the OS keychain"
+    },
+    "answer": "A",
+    "explanation": "MCP server configuration is scoped deliberately: project scope (a committed .mcp.json) is for servers the whole team needs, while user scope registers a server in the individual's own configuration across all their projects without touching the repository. A personally licensed service belongs in user scope. Committing it to project scope would surface a server teammates cannot authenticate to — and even with the secret externalized, the configuration itself would still be shared, which is precisely what the requirement rules out."
+  },
+  {
+    "domain": 4,
+    "scenario": "An MCP server exposes fourteen thin CRUD tools over a ticketing system: list_projects, get_project, list_tickets, get_ticket, create_ticket, update_ticket_status, update_ticket_assignee, add_comment, and so on. Agents using it frequently pick the wrong tool and need five or six calls to complete one routine operation.",
+    "question": "What is the most effective redesign of the tool surface?",
+    "options": {
+      "A": "Add longer descriptions and usage examples to all fourteen tools",
+      "B": "Consolidate the surface into a few task-shaped tools that match the operations agents actually perform — for example a single triage_ticket tool that assigns, sets status, and comments in one call — keeping the exposed tool count near the small range models route reliably over",
+      "C": "Merge all fourteen into one generic execute_operation tool that takes an operation name and a free-form payload",
+      "D": "Keep all fourteen tools but return an error suggesting the correct tool when the wrong one is called"
+    },
+    "answer": "B",
+    "explanation": "Tool selection degrades as the surface grows; mirroring a REST API one-to-one produces many thin tools whose boundaries the model must infer at call time. Designing around the agent's tasks rather than the backend's endpoints cuts both the routing ambiguity and the number of round trips per operation. Better descriptions do not fix a structural problem, and collapsing everything into one free-form dispatcher is the opposite failure: it removes the schema entirely and pushes validation into prose."
+  },
+  {
+    "domain": 5,
+    "scenario": "A long-running agent keeps violating a constraint stated near the beginning of a very long conversation. The team's response is to move the workload onto a model with a far larger context window and let the transcript grow further. The violations continue at about the same rate.",
+    "question": "Why did the larger context window not solve the problem?",
+    "options": {
+      "A": "The constraint needs to be repeated in every single turn regardless of window size",
+      "B": "Context window size governs how much fits, not how reliably attention is distributed across it; material buried in the middle of a long context loses salience, so the fix is curation — reposition critical constraints near the start or end, trim verbose intermediate output, and carry a compacted state summary forward",
+      "C": "The larger model's attention mechanism is identical, so no context-management change can help",
+      "D": "The transcript exceeded the output token limit rather than the input limit"
+    },
+    "answer": "B",
+    "explanation": "Assuming a larger window improves attention is a named anti-pattern. Capacity and recall are different properties: as a context fills, content in the middle loses salience, and a bigger window simply allows more material to accumulate there. Reliability comes from managing what occupies the context — positioning durable constraints where attention is strongest, pruning transient tool output, and compacting history into a structured summary that preserves decisions."
+  },
+  {
+    "domain": 5,
+    "scenario": "A team designs a research agent to load an entire 900,000-token document corpus into a single large-context request on every user question, arguing that this avoids building retrieval infrastructure. Latency per question is minutes, and monthly spend is far above forecast.",
+    "question": "What is the soundest architectural assessment?",
+    "options": {
+      "A": "The approach is correct; the team should negotiate volume pricing rather than change the architecture",
+      "B": "Treat the context window as a budget rather than a container: retrieve and pass only the relevant subset per question, and cache the genuinely stable shared prefix — input tokens are billed on every call, so re-sending an unchanging corpus per question pays repeatedly for context the question does not use",
+      "C": "Switch to the cheapest available model and keep loading the full corpus",
+      "D": "Split the corpus across parallel subagents, each loading its third of the corpus on every question"
+    },
+    "answer": "B",
+    "explanation": "Large context windows make corpus-stuffing possible, not advisable: every call re-bills the full input and pays the latency of processing it, while the extra material also dilutes attention. The standard design is retrieval that selects the relevant subset per question, combined with prompt caching for any stable prefix that genuinely recurs. Cheaper models and parallel fan-out reduce the unit price of a wasteful pattern without removing the waste."
+  },
+  {
+    "domain": 4,
+    "scenario": "An agent completes a multi-turn tool-using research task. On the final turn the orchestrator wants Claude to write a prose synthesis of everything gathered, and it must not issue any further tool calls — several past runs burned extra turns and tokens re-querying sources during the write-up.",
+    "question": "Which tool_choice setting expresses this requirement?",
+    "options": {
+      "A": "tool_choice: 'auto', since Claude will naturally stop calling tools once it has enough information",
+      "B": "tool_choice: 'none', which permits the tools to remain defined in the request while prohibiting Claude from calling any of them on that turn",
+      "C": "tool_choice: 'any', which forces exactly one final tool call to close out the task",
+      "D": "Remove the tools array from the final request entirely"
+    },
+    "answer": "B",
+    "explanation": "tool_choice has four modes: 'auto' (model may call a tool or answer in text), 'any' (must call some tool, model picks), a forced specific tool ({type: 'tool', name: ...}), and 'none' (may not call any tool). A turn that must produce text only is exactly what 'none' is for. 'auto' leaves the decision probabilistic, 'any' guarantees the opposite of the requirement, and stripping the tools array works but discards the cached tool definitions and diverges the request shape from the rest of the conversation — 'none' states the constraint without disturbing either."
+  },
+  {
+    "domain": 1,
+    "scenario": "To cut cost, an architect proposes moving an entire agentic workflow — a loop in which Claude calls tools, receives results, and decides its next action over several turns — into the Message Batches API, submitting each user's task as one batch request.",
+    "question": "What is the fundamental obstacle?",
+    "options": {
+      "A": "None; batch requests support the same agentic loop, just with delayed delivery",
+      "B": "The Batches API processes independent, self-contained requests and does not support the multi-turn tool-calling exchange an agentic loop requires, so the loop must run on standard requests — batch is appropriate for the self-contained units of work around the loop, such as bulk classification or offline evaluation",
+      "C": "The Batches API cannot return structured output, only free-form text",
+      "D": "Batch requests are capped at a single tool definition per request"
+    },
+    "answer": "B",
+    "explanation": "An agentic loop is inherently multi-turn: each tool result feeds the next model decision. The Batches API is built for large volumes of independent, self-contained requests with results correlated by custom_id and returned within a processing window — it does not carry an interactive tool-use exchange. The sound architecture keeps the loop on standard requests and routes the surrounding self-contained work — bulk classification, backfills, offline evaluation runs — to batch, where the cost saving applies without a latency or protocol conflict."
+  },
+  {
+    "domain": 3,
+    "scenario": "An invoice extraction pipeline validates every response against its JSON Schema and rejects anything malformed. Records now always parse, but downstream accounting still finds bad data: invoice dates in the future, negative line-item quantities, and totals that do not equal the sum of their line items.",
+    "question": "What is missing from the validation design?",
+    "options": {
+      "A": "Nothing structural — the schema should be tightened until it can express every business rule",
+      "B": "A semantic validation layer on top of schema validation: schema validation proves shape and type, not business correctness, so add checks for cross-field consistency and domain rules, and on failure retry with the specific semantic error returned to Claude",
+      "C": "The temperature should be lowered to zero so arithmetic is computed correctly",
+      "D": "Human review of every extracted invoice before it reaches accounting"
+    },
+    "answer": "B",
+    "explanation": "Structural and semantic validity are different guarantees. A schema constrains shape, types, required fields, and enumerated values; it cannot express that a total must equal the sum of its lines or that a date must not be in the future. Production extraction needs both layers, with semantic failures fed back as specific, actionable errors in a bounded retry so the next attempt is corrective. Some rules can be partly encoded in a schema, but arithmetic consistency is not among them; sampling changes do not make a model an arithmetic oracle; and full human review discards the automation rather than fixing it."
+  },
+  {
+    "domain": 3,
+    "scenario": "A content-moderation prompt lists five examples of policy-violating posts and instructs Claude to flag anything similar. In production it over-flags heated but permissible debate and is inconsistent on borderline satire.",
+    "question": "How should the prompt's criteria be improved?",
+    "options": {
+      "A": "Add many more examples of violating posts so the boundary becomes sharper",
+      "B": "Cover the decision boundary in all three directions — clear positive cases, clear negative cases that must NOT be flagged, and worked ambiguous cases with the reasoning for how each resolves — instead of positive examples alone",
+      "C": "Instruct Claude to flag only when it is completely certain",
+      "D": "Ask Claude to assign a confidence score and flag everything above 0.5"
+    },
+    "answer": "B",
+    "explanation": "Positive-only examples teach what a violation looks like but say nothing about where the boundary sits, so the model generalizes outward and over-flags. Defining positive, negative, and ambiguous cases — with the resolution reasoning for the ambiguous ones — specifies the boundary from both sides. More positive examples deepen the same bias; a vague certainty instruction substitutes an unobservable internal state for explicit criteria; and a self-reported confidence score with an arbitrary threshold is the same problem with a number attached."
+  },
+  {
+    "domain": 5,
+    "scenario": "A long-running order-management agent tracks each order's status, approvals, and amounts purely in the conversation transcript. After compaction runs, the agent occasionally reports an order as pending that was approved earlier in the session, and two sessions working the same order disagree about its state.",
+    "question": "What is the underlying architectural error?",
+    "options": {
+      "A": "Compaction is too aggressive; raise the threshold so it triggers later",
+      "B": "Durable state is being kept in transient conversation context — order status belongs in an external store the agent reads and writes through tools, with the transcript holding only the working discussion; context then becomes a cache of the state rather than the system of record",
+      "C": "The agent should re-read the entire transcript before answering any status question",
+      "D": "Each order should get a dedicated session that is never compacted"
+    },
+    "answer": "B",
+    "explanation": "Reliable agent systems separate durable state from transient conversation. Anything that must survive compaction, session boundaries, or concurrent access has to live in an external system of record the agent reaches through tools; the context window is a working buffer with lossy retention, not a database. Tuning the compaction threshold or forbidding compaction only postpones the loss and does nothing for the cross-session disagreement, which is a shared-state problem no single-session setting can solve."
   }
 ]

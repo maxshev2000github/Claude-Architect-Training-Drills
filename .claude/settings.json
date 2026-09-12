@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m json.tool \"CONTEXT/example_questions.json\")",
+      "WebSearch",
+      "WebFetch(domain:www.anthropiccertifications.com)",
+      "WebFetch(domain:open-exam-prep.com)"
+    ]
+  }
+}

@@ -19,6 +19,16 @@ Information in the middle of large inputs receives less attention than beginning
 - `cache_control` breakpoints on content blocks
 - Cached content reused across requests sharing the same prefix
 - Reduces latency (cached tokens processed faster) and cost
+- Match must be exact — any change earlier in the prompt than the breakpoint invalidates everything after it (cache miss, falls back to normal processing)
+- Invalidation is implicit (prefix mismatch or TTL expiry), not something you manage manually — unlike an application-level cache where you write invalidation logic yourself
+
+### TTL and Minimum Thresholds
+- Default cache TTL is short (commonly ~5 minutes); a longer-lived option is available. If no request hits the cache within the window, it expires and must be rebuilt on the next call
+- Only pays off when the same prefix is reused frequently enough to keep landing inside that window
+- Minimum token count applies per model before a block is eligible for caching — very short prefixes aren't worth caching
+
+### Good Candidates to Cache
+Large, stable content repeated across many calls, placed early in the prompt: system prompts, tool definitions, long reference documents/context, few-shot examples. Not the varying user turn at the end — that's exactly what shouldn't be before the breakpoint.
 
 ### Caching + Extended Thinking Interaction
 | Component | Survives budget_tokens change? |

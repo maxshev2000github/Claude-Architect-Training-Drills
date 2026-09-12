@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "exam": "node exam.mjs",
-    "quiz": "node exam.mjs --questions 10 --no-timer"
+    "quiz": "node exam.mjs --questions 10 --no-timer",
+    "diagnostic": "node exam.mjs --questions 20 --no-timer",
+    "flashcards": "node flashcards.mjs"
   },
   "keywords": ["cca-f", "exam", "claude", "anthropic"],
   "license": "MIT"

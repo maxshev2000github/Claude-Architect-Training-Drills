@@ -2820,5 +2820,96 @@
     },
     "answer": "B",
     "explanation": "For expensive, frequently repeated MCP tool operations, server-side caching with an appropriate TTL is the correct approach. The server manages the cache lifecycle, returning cached results for repeated queries without re-executing the expensive data warehouse call. Client-side prompt caching is for API message content, not MCP tool results. Pagination and compression address different problems."
+  },
+  {
+    "domain": 1,
+    "scenario": "A research system routes every query through the same four-subagent sequential pipeline (query planner, web search, document analysis, synthesis). In production, simple fact-checking queries such as 'What year was the Paris Climate Agreement signed?' traverse all four subagents, consuming 40+ seconds and significant tokens, while complex comparative research genuinely benefits from the full pipeline. The query distribution is diverse and still evolving as users discover new applications.",
+    "question": "What is the most effective approach to optimize for varying query complexity?",
+    "options": {
+      "A": "Add a lightweight classifier that assigns each query to a complexity tier with a defined effort budget (single agent for fact lookup, 2-4 subagents for direct comparison, full pipeline for open-ended research), plus an escalation path and logged routing decisions evaluated against a held-out query set",
+      "B": "Cache results for frequently asked factual queries so repeat lookups bypass the pipeline entirely",
+      "C": "Run the four subagents in parallel instead of sequentially to cut end-to-end latency for all query types",
+      "D": "Add a keyword filter that skips the pipeline whenever the query is under fifteen words or begins with 'what', 'when', or 'who'"
+    },
+    "answer": "A",
+    "explanation": "This is the routing pattern applied to effort, not just model tier: classify complexity up front and scale the number of subagents and tool calls to match, making the full pipeline the ceiling rather than the default. The classifier must be cheap (a small classification call, not a fifth agent hop) and needs an escalation path for low-confidence classifications, conflicting sources, or sub-questions discovered mid-flight. Because the distribution is explicitly evolving, logging (query, tier, outcome, cost, latency) and evaluating against a held-out set is what keeps routing accurate over time. Caching (B) only helps exact repeats and does nothing for novel simple queries. Parallelizing (C) reduces latency but not token cost, and breaks the genuine sequential dependencies where each stage consumes the prior stage's output. Keyword heuristics (D) are brittle proxies for complexity and cannot adapt to a non-stationary distribution — 'What is the difference between the EU and US approaches to carbon pricing?' matches every one of those rules."
+  },
+  {
+    "domain": 1,
+    "scenario": "Production reviews of a multi-agent research system reveal inconsistent handling of uncertainty in final reports. Sometimes conflicting subagent findings are synthesized into a single confident statement, losing nuance; other times reports over-hedge with excessive qualifications and become unhelpful. When the web search agent returns 'industry analysts estimate $50B market size (methodology varies)' and the document analysis agent returns 'peer-reviewed study estimates $35B (+/-7B, 95% CI)', the coordinator either picks one arbitrarily or produces vague statements like 'the market may be $35B-$50B depending on factors.'",
+    "question": "What systematic approach best addresses this?",
+    "options": {
+      "A": "Instruct the synthesis prompt to always report the most conservative estimate when subagent findings disagree",
+      "B": "Require subagents to return findings as structured records with typed confidence, methodology, scope, and source-tier fields, then give the coordinator an explicit conflict taxonomy and evidence hierarchy that defines the required action for each conflict class",
+      "C": "Route every detected conflict to a human reviewer before the report is finalized",
+      "D": "Add a second synthesis pass that rewrites hedged language into clearer prose before the report is returned"
+    },
+    "answer": "B",
+    "explanation": "The root cause is that uncertainty metadata is destroyed at the agent boundary: prose hand-offs force the coordinator to re-infer confidence, methodology, and scope from natural language, so its behavior is unstable. Typed fields preserve that metadata, and a conflict taxonomy with a defined action per class (scope mismatch, methodology difference, genuine disagreement, stale data) makes synthesis deterministic rather than improvised. An evidence hierarchy (peer-reviewed with stated methodology > analyst estimate with disclosed method > undisclosed estimate > vendor claim) resolves precedence. Note that the example is likely a scope mismatch, not a disagreement — differently scoped measurements must never be range-merged. Option A collapses real distinctions and is wrong whenever the conservative figure is the less credible one. Option C does not scale and treats human review as the primary mechanism rather than an escalation path for residual cases. Option D is cosmetic: it improves readability of an already-corrupted synthesis without recovering the lost metadata."
+  },
+  {
+    "domain": 3,
+    "scenario": "A research system is expanded with specialized data sources: a financial API agent returning structured JSON with revenue, margins, and growth rates; a news monitoring agent returning prose summaries of recent developments; and a patent analysis agent returning structured lists of technology areas. A synthesis agent combines these into executive briefings. It currently converts everything to bullet points, causing financial comparisons to lose tabular clarity and news summaries to lose narrative flow.",
+    "question": "What change would most improve briefing quality?",
+    "options": {
+      "A": "Require all three source agents to emit the same JSON schema so the synthesis agent receives uniform input",
+      "B": "Have each source agent write its own finished briefing section and concatenate the three sections into the final report",
+      "C": "Have each agent emit structured payloads tagged with a content-type descriptor, and give the synthesis agent format-selection rules mapping each content type to a presentation form (comparative metrics to tables, temporal narrative to prose, taxonomies to grouped lists) within a fixed briefing template",
+      "D": "Add a formatting agent after synthesis that restyles the combined bullet list into tables and paragraphs as appropriate"
+    },
+    "answer": "C",
+    "explanation": "At agent boundaries, structure is content: a table encodes an entity-by-metric relation, prose encodes sequence and causation, and a categorized list encodes taxonomy membership. Flattening all three to bullets is a lossy encoding applied at the one point where the loss becomes irreversible. Tagging payloads with a content type and giving synthesis explicit per-type rendering rules makes format selection deterministic while leaving the coordinator free to do the real work of reconciling claims across sources. Option A moves the same lossy normalization upstream, destroying the news narrative even earlier — note the contrast with response normalization at the tool layer, which is correct when unifying comparable fields from heterogeneous APIs, but wrong when applied to genuinely different content types. Option B eliminates synthesis entirely: financial, news, and patent signals frequently bear on the same claim, and three self-written sections yield disconnected reports with no conflict reconciliation. Option D is post-hoc repair of already-flattened content; the rendering agent cannot recover the original structure and will invent one instead."
+  },
+  {
+    "domain": 5,
+    "scenario": "An engineer asks your agent to identify untested code paths in a legacy payment processing module spanning 45 files. After reading the first 8 source files, the agent's responses are becoming noticeably less accurate — it's forgetting previously discussed code patterns and hasn't yet located all test files or traced critical payment flows.",
+    "question": "What's the most effective approach to complete this investigation?",
+    "options": {
+      "A": "Document all current findings in a summary report, clear context completely, then use that report as the sole reference for continuing the investigation.",
+      "B": "Spawn subagents to investigate specific questions (e.g., 'find all test files for payment processing', 'trace refund flow dependencies') while the main agent coordinates findings and preserves high-level understanding.",
+      "C": "Clear context with /clear, then selectively re-read only the most critical files discovered so far, writing key findings to a scratchpad file that persists between context resets.",
+      "D": "Switch to using Grep to search for specific function names instead of reading full files, reducing the content loaded into context for remaining exploration."
+    },
+    "answer": "B",
+    "explanation": "The failure is context exhaustion during breadth-first exploration: 8 files have already saturated the window and 37 remain, so any approach that routes the remaining files through the same context hits the same wall later. Subagent delegation is the only option that changes the structure — each subagent gets a fresh window, absorbs the raw file contents, and returns a distilled finding, so the coordinator's context grows by conclusions rather than by source code. The scenario supplies the decomposition explicitly ('locate all test files' and 'trace critical payment flows' are independent investigations), which also enables parallel execution. Option C is the strongest distractor and is a legitimate technique — persisting findings to a scratchpad is good practice — but /clear destroys the coordinator's working understanding mid-investigation and the remaining 37 files still flow serially through one context, so it buys one more window rather than a scalable structure; it is the fallback when subagent delegation is unavailable. Option A is worse: 'sole reference' makes the summary lossy and irreversible with no path back to details, and it clears context before the work is done. Option D confuses a token optimization with a context strategy — determining whether a code path is untested requires tracing control flow against test coverage, which function-name matching cannot do, and results still accumulate in the same context. Discriminator: subagent delegation is architectural and parallel (context isolation by design), while scratchpad-plus-clear is reactive and serial (same context, periodically flushed)."
+  },
+  {
+    "domain": 1,
+    "scenario": "Production monitoring shows that follow-up queries like 'summarize what we learned about market trends' consistently take 40+ seconds. Investigation reveals the coordinator spawns the synthesis subagent for each summarization request, passing 80K+ tokens of accumulated findings. The coordinator already has these findings in its context from orchestrating the research.",
+    "question": "What's the most effective way to improve response time for these follow-up summaries?",
+    "options": {
+      "A": "Pre-generate and cache summaries at multiple granularities whenever new findings accumulate.",
+      "B": "Have the coordinator handle straightforward summarization requests directly using its existing context, reserving subagent spawning for complex analysis.",
+      "C": "Enable prompt caching on the synthesis subagent to reduce the overhead of repeatedly transferring the same research findings.",
+      "D": "Spawn the synthesis subagent with reduced context and have it request specific findings from the coordinator on-demand."
+    },
+    "answer": "B",
+    "explanation": "Subagent delegation costs a full context transfer and is justified when the subagent gathers new information, runs work in parallel, or keeps a large intermediate out of the coordinator's window. None of those applies here: the stem states the coordinator already holds the findings, so the spawn re-serializes and cold-prefills 80K tokens purely to move data into a context that lacks it. Answering inline costs only the new instruction plus generation. The sharper form of the rule is that delegation should be triggered by information need, not by apparent task complexity — a hard analytical question over already-in-context findings should also stay inline. Prompt caching is the strongest distractor and fails on two independent grounds: findings accumulate between follow-ups, so the cached prefix diverges at the append point and misses on exactly the requests it was meant to serve; and even a perfect cache hit still pays the spawn, the serialization, a cache read over 80K tokens, and the return hop to deliver data the coordinator already holds for free. It optimizes the cost of a redundant transfer rather than eliminating the transfer. Pre-generating summaries at multiple granularities performs speculative work at granularities and angles that cannot be predicted, and the results go stale as findings grow. Spawning with reduced context and fetching findings on demand is strictly worse than the status quo, adding subagent-to-coordinator round trips on top of the delegation hop. Boundary condition: this holds while accumulated findings fit comfortably in the coordinator's window; once they do not, externalize findings as structured artifacts with retrieval and have the coordinator keep an index."
+  },
+  {
+    "domain": 5,
+    "scenario": "During testing, you observe that in extended exploration sessions (30+ minutes), the agent starts giving inconsistent answers about code structure it discussed earlier. Engineers report having to repeat context about modules they've already explored.",
+    "question": "What's the most effective approach to address this?",
+    "options": {
+      "A": "Have the agent maintain a scratchpad file that records key findings, referencing it for subsequent questions.",
+      "B": "Switch to a higher-capacity model tier to provide more context window space for accumulated exploration data.",
+      "C": "Implement automatic context clearing every 15 minutes to ensure the agent starts with fresh, uncontaminated context.",
+      "D": "Create summaries of all source files before exploration begins, loading only these compressed representations into context."
+    },
+    "answer": "A",
+    "explanation": "What is being lost is derived knowledge — conclusions the agent produced about code structure — not source material. The scratchpad pattern externalizes exactly that: findings are written to a file that survives compaction and context pressure and can be re-read on demand, which is why engineers stop having to re-explain modules. Note the discriminator against the subagent-delegation answer used in similar-looking questions: subagent delegation is the fix when too much raw material must pass through one window (context isolation), while a scratchpad is the fix when derived conclusions must survive a long session (persistence). They are complements, and a tell here is that no option mentions subagents at all. Pre-summarizing all source files compresses the wrong artifact — it preserves inputs while the outputs are what is decaying, it is speculative because the relevant files are not known in advance, it is lossy in an unpredictable direction, and a 30-minute session over compressed representations still accumulates conversation and still degrades. A higher-capacity model buys headroom that a longer session consumes, and long-context degradation is not purely a capacity problem. Automatic clearing every 15 minutes is strictly worse than doing nothing: it destroys state without preserving any of it, guaranteeing the repetition the engineers are reporting."
+  },
+  {
+    "domain": 5,
+    "scenario": "An engineer asks the agent to understand how the caching layer works before adding a new cache invalidation trigger. After initial Grep searches, the agent has identified that caching logic spans 15 files including decorators, middleware, and service classes (~8,000 lines total).",
+    "question": "What's the most effective next step for building understanding while managing context constraints?",
+    "options": {
+      "A": "Use the Read tool to sequentially load all 15 files, building complete understanding across the full caching implementation.",
+      "B": "Analyze imports and class hierarchies to identify the base cache class, Read that file to understand the interface, then trace specific invalidation implementations.",
+      "C": "Use Grep to search for 'invalidate' and 'expire' patterns across all files, then Read only those specific line ranges with minimal surrounding context.",
+      "D": "Use Glob to find files matching common caching patterns (cache.py, caching/), prioritize the largest files by reading them first, then check smaller files for gaps."
+    },
+    "answer": "B",
+    "explanation": "The objective is not to locate invalidation call sites but to understand the caching layer well enough to add a new trigger, which requires the contract: what the base class defines, how triggers are registered and dispatched, and what the decorators and middleware wire up. That contract lives in the abstraction, so reading the base cache class first yields the smallest artifact with the highest information density about how the other fourteen files fit together, after which imports and class hierarchies provide edges to follow for selective reads. Note that this option is also context-efficient — it does not read all 15 files — but its selectivity is guided by structure rather than string matching. The keyword-fragment option is the trap, because the phrase 'managing context constraints' points straight at the most token-minimizing choice. It fails three ways: it answers the wrong question (call sites do not reveal the registration interface a new trigger must satisfy); 'minimal surrounding context' strips the class, signature, and control flow that make a matched line interpretable, forcing a second full read later; and the vocabulary assumption is brittle, since caching code uses evict, purge, bust, clear, stale, ttl, and decorator or event-hook wiring that contains neither search term — keyword search presumes knowledge of the naming conventions that are exactly what is not yet known. Reading all 15 files brute-forces 8,000 lines and is the anti-pattern the stem warns against. The Glob option treats file size as a proxy for architectural importance, which is backwards — the base class defining the contract is often among the smallest files — and it re-discovers files Grep already identified. Principle: navigate an unfamiliar subsystem by structure (imports, inheritance, interfaces), not by string frequency; keyword search locates a subsystem, it does not explain one."
   }
 ]

@@ -35,6 +35,7 @@ A scheduled tutor task (`cca-f-daily-tutor`, runs 8am daily) drives study:
 - `CONTEXT/` — background materials, study notes, and domain summaries relevant to the CCA-F exam.
 - `DRILLS/` — hands-on practice exercises organized by drill. Each drill is self-contained.
 - `REFERENCES/` — official docs, cheat sheets, and reference material for quick lookup during study.
+- `RESULTS/` — quiz history written by `exam.mjs` (`exam_log.jsonl`, one line per session with per-domain breakdown and every missed question). Each session also appends a row to the `TRAINING_PROGRAM.md` scoring log automatically.
 
 ## Custom slash commands
 

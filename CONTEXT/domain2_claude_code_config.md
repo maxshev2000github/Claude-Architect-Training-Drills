@@ -123,5 +123,5 @@ Best for large-scale changes (50+ files) and architectural decisions. Direct exe
 
 ## Key Exam Scenarios (Domain 2)
 
-- Claude Code Team Setup: CLAUDE.md hierarchy, settings precedence, onboarding consistency
+- Code Generation with Claude Code: CLAUDE.md hierarchy, settings precedence, custom slash commands, plan mode vs direct execution, onboarding consistency
 - Claude Code in CI/CD: headless flags, PR review automation, false positive minimization

@@ -765,15 +765,15 @@
     "scenario": "The CCA-F exam draws from a pool of six predefined scenarios, but each exam instance only presents four of them. A candidate is preparing and wants to allocate study time efficiently across the scenarios.",
     "question": "Which of the following is a correct list of the six CCA-F exam scenarios?",
     "options": {
-      "A": "Customer Support Agent, RAG Pipeline, Multi-Agent Research System, API Gateway, Claude Code in CI/CD, Structured Data Extraction",
-      "B": "Customer Support Agent, Claude Code Team Setup, Multi-Agent Research System, Developer Productivity Tools, Claude Code in CI/CD, Structured Data Extraction",
-      "C": "Chatbot Design, Claude Code Team Setup, Multi-Agent Research System, Developer Productivity Tools, Fine-Tuning Pipeline, Structured Data Extraction",
-      "D": "Customer Support Agent, Claude Code Team Setup, Embedding Pipeline, Developer Productivity Tools, Claude Code in CI/CD, Model Training"
+      "A": "Customer Support Resolution Agent, RAG Pipeline, Multi-Agent Research System, API Gateway, Claude Code for Continuous Integration, Structured Data Extraction",
+      "B": "Customer Support Resolution Agent, Code Generation with Claude Code, Multi-Agent Research System, Developer Productivity with Claude, Claude Code for Continuous Integration, Structured Data Extraction",
+      "C": "Customer Support Resolution Agent, Claude Code Team Setup, Multi-Agent Research System, Developer Productivity with Claude, Fine-Tuning Pipeline, Structured Data Extraction",
+      "D": "Chatbot Design, Code Generation with Claude Code, Embedding Pipeline, Developer Productivity with Claude, Claude Code for Continuous Integration, Model Training"
     },
     "answer": "B",
-    "explanation": "The CCA-F exam uses six predefined scenarios, of which four are randomly selected per exam: (1) Customer Support Agent, (2) Claude Code Team Setup, (3) Multi-Agent Research System, (4) Developer Productivity Tools, (5) Claude Code in CI/CD, and (6) Structured Data Extraction. Candidates should prepare for all six since they cannot predict which four will appear.",
+    "explanation": "Each exam draws four of six production scenarios at random: (1) Customer Support Resolution Agent, (2) Code Generation with Claude Code, (3) Multi-Agent Research System, (4) Developer Productivity with Claude, (5) Claude Code for Continuous Integration, and (6) Structured Data Extraction. Prep guides word some of these slightly differently (e.g. 'Developer Productivity Tools', 'Claude Code in CI/CD'), but scenario 2 is Code Generation with Claude Code — CLAUDE.md setup, custom slash commands, and plan mode vs direct execution — not 'Claude Code Team Setup'. RAG, embedding, fine-tuning, and model-training pipelines are not exam scenarios. Prepare for all six, since you cannot predict which four will appear.",
     "relevance": "low",
-    "relevance_note": "Fabricated exam meta-knowledge; claims 6 predefined scenarios randomly selected"
+    "relevance_note": "Exam meta-knowledge rather than an architecture skill; 4-of-6 scenario format and names corroborated by multiple 2026 prep guides (exact wording varies by source)"
   },
   {
     "domain": 1,
@@ -1041,7 +1041,7 @@
   },
   {
     "domain": 2,
-    "scenario": "[Scenario 2: Claude Code Team Setup] A team is onboarding 8 developers to a Claude Code project. Senior devs have extensive personal ~/.claude/CLAUDE.md files with coding preferences. The project has a root CLAUDE.md and .claude/rules/ with path-specific rules. Junior developers report that Claude Code gives them different suggestions than senior devs on the same files.",
+    "scenario": "[Scenario 2: Code Generation with Claude Code] A team is onboarding 8 developers to a Claude Code project. Senior devs have extensive personal ~/.claude/CLAUDE.md files with coding preferences. The project has a root CLAUDE.md and .claude/rules/ with path-specific rules. Junior developers report that Claude Code gives them different suggestions than senior devs on the same files.",
     "question": "What is causing the inconsistency, and how should the team fix it?",
     "options": {
       "A": "Junior devs should copy senior devs' personal CLAUDE.md files",
@@ -1050,7 +1050,7 @@
       "D": "Each developer should use settings.json to override the project-level rules"
     },
     "answer": "B",
-    "explanation": "In the Claude Code Team Setup scenario, a key gotcha is that user-level ~/.claude/CLAUDE.md is personal and not shared. Only project-level CLAUDE.md and .claude/rules/ files are committed to the repo. To ensure consistent behavior across the team, all coding conventions must live in version-controlled project files. Personal CLAUDE.md files provide individual preferences but should never contain team-critical rules."
+    "explanation": "In the Code Generation with Claude Code scenario, a key gotcha is that user-level ~/.claude/CLAUDE.md is personal and not shared. Only project-level CLAUDE.md and .claude/rules/ files are committed to the repo. To ensure consistent behavior across the team, all coding conventions must live in version-controlled project files. Personal CLAUDE.md files provide individual preferences but should never contain team-critical rules."
   },
   {
     "domain": 2,
@@ -1418,7 +1418,7 @@
   },
   {
     "domain": 2,
-    "scenario": "[Scenario 2: Claude Code Team Setup] A project's root CLAUDE.md has grown to 500+ lines containing coding standards, an API reference, onboarding docs, and release procedures. Developers notice higher costs per session and Claude occasionally ignores rules buried deep in the file.",
+    "scenario": "[Scenario 2: Code Generation with Claude Code] A project's root CLAUDE.md has grown to 500+ lines containing coding standards, an API reference, onboarding docs, and release procedures. Developers notice higher costs per session and Claude occasionally ignores rules buried deep in the file.",
     "question": "What is the recommended approach to restructure this?",
     "options": {
       "A": "Split the CLAUDE.md into one file per developer with their relevant sections",
@@ -5031,7 +5031,7 @@
   },
   {
     "domain": 2,
-    "scenario": "[Scenario 2: Claude Code Team Setup] A team packages its incident-response runbook as an Agent Skill. The SKILL.md body is 40 lines, but it references three long reference files (a 900-line escalation matrix, a query cookbook, and a postmortem template). Engineers complain that unrelated sessions now carry the whole runbook.",
+    "scenario": "[Scenario 2: Code Generation with Claude Code] A team packages its incident-response runbook as an Agent Skill. The SKILL.md body is 40 lines, but it references three long reference files (a 900-line escalation matrix, a query cookbook, and a postmortem template). Engineers complain that unrelated sessions now carry the whole runbook.",
     "question": "How should the skill be structured?",
     "options": {
       "A": "Keep a short description and body in SKILL.md that points to the reference files by path, so the model loads them only when the skill is actually invoked and the task requires them",
@@ -5044,7 +5044,7 @@
   },
   {
     "domain": 2,
-    "scenario": "[Scenario 2: Claude Code Team Setup] A repo has ~/.claude/CLAUDE.md (user preferences: 'always use pnpm'), a root CLAUDE.md ('this repo uses npm'), and services/api/CLAUDE.md ('this service uses yarn'). An engineer runs Claude Code from the repo root and asks it to add a dependency to services/api.",
+    "scenario": "[Scenario 2: Code Generation with Claude Code] A repo has ~/.claude/CLAUDE.md (user preferences: 'always use pnpm'), a root CLAUDE.md ('this repo uses npm'), and services/api/CLAUDE.md ('this service uses yarn'). An engineer runs Claude Code from the repo root and asks it to add a dependency to services/api.",
     "question": "Which package manager guidance governs, and why?",
     "options": {
       "A": "yarn - the most specific applicable file wins, with the directory-scoped CLAUDE.md taking precedence over the project root and user-level files for work in that directory",
@@ -5057,7 +5057,7 @@
   },
   {
     "domain": 2,
-    "scenario": "[Scenario 2: Claude Code Team Setup] Onboarding docs currently put four things in the root CLAUDE.md: the build command, an ANTHROPIC_API_KEY value, the team's code-style rules, and a note that one engineer's IDE needs a Vim keybinding extension.",
+    "scenario": "[Scenario 2: Code Generation with Claude Code] Onboarding docs currently put four things in the root CLAUDE.md: the build command, an ANTHROPIC_API_KEY value, the team's code-style rules, and a note that one engineer's IDE needs a Vim keybinding extension.",
     "question": "Which items are correctly placed, and what should happen to the others?",
     "options": {
       "A": "Build command and code-style rules belong in CLAUDE.md; the API key belongs in the environment or a secret store and must never be committed; the personal IDE preference belongs in the user-level config",
@@ -5304,7 +5304,7 @@
   },
   {
     "domain": 2,
-    "scenario": "[Scenario 2: Claude Code Team Setup] An engineer writes a deployment-runbook skill and saves it to ~/.claude/skills/deploy-runbook/SKILL.md. It works for them. Two weeks later a teammate handling an incident cannot get Claude Code to use the runbook at all, even after asking for it by name.",
+    "scenario": "[Scenario 2: Code Generation with Claude Code] An engineer writes a deployment-runbook skill and saves it to ~/.claude/skills/deploy-runbook/SKILL.md. It works for them. Two weeks later a teammate handling an incident cannot get Claude Code to use the runbook at all, even after asking for it by name.",
     "question": "What is the problem?",
     "options": {
       "A": "The skill is user-scoped and lives only on that engineer's machine; a team runbook belongs in the project's .claude/skills/ directory so it is committed and available to everyone working in the repo",
@@ -5317,7 +5317,7 @@
   },
   {
     "domain": 2,
-    "scenario": "[Scenario 2: Claude Code Team Setup] A team has a rotate-production-credentials skill. It must remain available for an engineer to run deliberately, but the model must never decide on its own that rotating credentials is a reasonable next step during unrelated work.",
+    "scenario": "[Scenario 2: Code Generation with Claude Code] A team has a rotate-production-credentials skill. It must remain available for an engineer to run deliberately, but the model must never decide on its own that rotating credentials is a reasonable next step during unrelated work.",
     "question": "Which configuration expresses this?",
     "options": {
       "A": "Set disable-model-invocation in the skill's frontmatter so it can only be invoked explicitly, and constrain allowed-tools to the minimum the rotation needs",
@@ -5696,7 +5696,7 @@
   },
   {
     "domain": 2,
-    "scenario": "[Scenario 2: Claude Code Team Setup] A root CLAUDE.md has grown to 700 lines, most of it frontend and database conventions that matter only when editing those areas. To cut per-session token cost, a developer moves the sections into docs/frontend.md and docs/db.md and replaces them with `@docs/frontend.md` and `@docs/db.md` lines. Session startup context is essentially unchanged.",
+    "scenario": "[Scenario 2: Code Generation with Claude Code] A root CLAUDE.md has grown to 700 lines, most of it frontend and database conventions that matter only when editing those areas. To cut per-session token cost, a developer moves the sections into docs/frontend.md and docs/db.md and replaces them with `@docs/frontend.md` and `@docs/db.md` lines. Session startup context is essentially unchanged.",
     "question": "Why did this not help, and what would?",
     "options": {
       "A": "@ imports only work with absolute paths; switch to absolute paths so they load lazily",
@@ -5722,7 +5722,7 @@
   },
   {
     "domain": 2,
-    "scenario": "[Scenario 2: Claude Code Team Setup] A security team must guarantee that no developer's Claude Code session can read files under secrets/ or run `terraform apply`, on every managed laptop and in every repository. Their draft places 'Never read secrets/ and never run terraform apply' in the managed policy CLAUDE.md deployed via MDM.",
+    "scenario": "[Scenario 2: Code Generation with Claude Code] A security team must guarantee that no developer's Claude Code session can read files under secrets/ or run `terraform apply`, on every managed laptop and in every repository. Their draft places 'Never read secrets/ and never run terraform apply' in the managed policy CLAUDE.md deployed via MDM.",
     "question": "What should the architect change?",
     "options": {
       "A": "Nothing — managed policy CLAUDE.md cannot be excluded by users, so the rule is already enforced",

@@ -1214,12 +1214,12 @@
     "question": "What is the best remediation?",
     "options": {
       "A": "Leave it as-is; more context in CLAUDE.md always improves behavior",
-      "B": "Keep CLAUDE.md short with the always-relevant rules and use @path imports (or move reference material to files Claude reads on demand) so detail is pulled in just-in-time rather than loaded every session",
+      "B": "Keep CLAUDE.md short with the always-relevant rules and move the detail to mechanisms that load on demand: path-scoped .claude/rules/ files, skills for procedures, and reference files Claude reads when a task needs them (not @path imports, which still load at launch)",
       "C": "Move the entire file to the user-level ~/.claude/CLAUDE.md",
       "D": "Split it into one CLAUDE.md per developer"
     },
     "answer": "B",
-    "explanation": "CLAUDE.md is injected into every session and consumes context on each turn, so it should stay lean and hold only consistently-relevant guidance. Bulky reference material belongs in separate files pulled in on demand via @path imports or just-in-time reads. This reduces per-session cost and keeps the high-priority rules prominent instead of buried."
+    "explanation": "CLAUDE.md is loaded into every session, so it should stay lean and hold only consistently-relevant guidance. Bulky material belongs where it loads on demand: path-scoped rules for area-specific standards, skills for procedures, and plain reference files Claude reads when needed. @path imports are not a fix for size, because imported files load at launch alongside the CLAUDE.md that references them. User-level CLAUDE.md still loads every session and is not shared with the team, and per-developer files break shared standards."
   },
   {
     "domain": 2,
@@ -1422,12 +1422,12 @@
     "question": "What is the recommended approach to restructure this?",
     "options": {
       "A": "Split the CLAUDE.md into one file per developer with their relevant sections",
-      "B": "Keep CLAUDE.md short with only always-relevant rules. Move reference material to separate files that Claude reads on demand via @path imports, so bulky content is pulled in just-in-time rather than loaded every session",
+      "B": "Keep CLAUDE.md short with only always-relevant rules. Move area-specific coding standards into .claude/rules/ files with paths frontmatter, package the release procedure as a skill, and keep the API reference and onboarding docs as separate files that are mentioned (not @-imported) so Claude reads them only when a task needs them",
       "C": "Move everything to .claude/rules/ files to reduce CLAUDE.md size",
-      "D": "Increase the context window setting to accommodate the larger CLAUDE.md"
+      "D": "Move the API reference and onboarding docs into separate files and pull them in with @path imports so they load only when a task needs them"
     },
     "answer": "B",
-    "explanation": "CLAUDE.md is injected into every session, consuming context on each turn. A 500+ line CLAUDE.md wastes tokens, increases cost, and buries important rules where they get less attention (lost-in-the-middle effect). The fix is to keep CLAUDE.md lean with consistently-relevant guidance and move reference material to separate files pulled via @path imports on demand. .claude/rules/ is for path-scoped rules, not a general dumping ground for all content."
+    "explanation": "CLAUDE.md is loaded into every session, so a 500+ line file costs tokens every time and buries important rules (Anthropic suggests keeping each CLAUDE.md under about 200 lines). Keep only always-relevant guidance there and move the rest to mechanisms that load on demand: path-scoped rules (.claude/rules/*.md with a paths glob) load when Claude reads matching files, skills load their full content only when invoked or relevant, and reference docs can simply be read when a task requires them. @path imports do not reduce cost: imported files are expanded and loaded at launch along with the CLAUDE.md that references them, so they help organization only (D). Moving everything into .claude/rules/ without paths frontmatter still loads it all at launch (C), and one file per developer (A) breaks shared team standards."
   },
   {
     "domain": 2,
@@ -4822,7 +4822,7 @@
     "explanation": "Tool search tool and programmatic tool calling are efficiency mechanisms: they cut the token overhead of tool definitions and the inference passes needed to chain tool calls. They say nothing about context isolation, which is the actual reason the pipeline was split into three agents — drafting benefits from not carrying the research agent's false starts and search noise, and fact-checking benefits from evaluating the draft without the drafting agent's justifications biasing it. Collapsing the pipeline keeps all of that noise in one shared context. B, C, and D are each factually wrong about how the features work: tool search applies to any tool exposed through the standard tool-use interface, allowed_callers is a per-tool opt-in for code-execution access rather than a subagent-compatibility requirement, and the ~18-tool degradation is a routing-accuracy pattern, not a hard technical ceiling that tool search is specifically designed to work around. Core principle: don't mistake token/inference efficiency gains for a substitute for the isolation and specialization that motivate multi-agent design."
   },
   {
-    "domain": 2,
+    "domain": 4,
     "scenario": "An architect connects Claude Code to five MCP servers (GitHub, Slack, Sentry, Grafana, Splunk). Loading all tool definitions consumes roughly 55K tokens before the conversation even starts, and some production sessions reach 134K+ tokens of tool definitions alone — most of which are never invoked in a given session.",
     "question": "Which change addresses this most directly?",
     "options": {
@@ -4835,7 +4835,7 @@
     "explanation": "The tool search tool is designed exactly for this problem: instead of paying the full token cost of every tool definition upfront, Claude discovers and loads tool definitions on demand, cutting token consumption by a large margin while preserving access to the full tool library. Removing servers (B) sacrifices functionality the team presumably needs some of the time. Collapsing everything into one generic \"server + action\" tool (C) doesn't reduce token consumption — the server still has to document every valid combination somewhere — and it reintroduces a routing problem in a different guise, since Claude must now guess valid server/action pairs from a generic schema instead of discovering well-typed tools. Switching transport from stdio to HTTP (D) is an unrelated concern; transport choice affects how requests are transmitted, not how many tokens tool definitions consume in context. Core principle: when tool definition volume is the bottleneck, load tools on demand rather than trading away capability or coverage."
   },
   {
-    "domain": 2,
+    "domain": 4,
     "scenario": "A data-analysis agent runs a workflow calling 20+ tools in sequence: pull a dataset, filter it, join it against a lookup table, aggregate, and format the result. Only the final formatted output matters to the user, but each intermediate result is currently returned to Claude and re-submitted on the next turn, and the team measures 19+ separate inference passes and heavy context growth for a single workflow run.",
     "question": "What is the most effective fix for this token growth and latency?",
     "options": {
@@ -4861,7 +4861,7 @@
     "explanation": "A JSON schema defines what is structurally valid, not when or how fields are conventionally used together — that's a usage pattern, and usage patterns are best taught by example. input_examples showing realistic, varied calls (minimal to fully-specified) let Claude infer both the correlation between fields (when attendees tends to be present) and formatting conventions (how recurrence values are actually written), which prose alone struggles to convey unambiguously. A longer description (B) is still prose — it can state a rule but can't demonstrate the pattern of co-occurring fields and formatting the way a concrete example does, and verbose descriptions consume more tokens for uncertain gain. Making attendees required (C) breaks the many legitimate calls where an event genuinely has no attendees, forcing placeholder or empty values just to satisfy validation. Splitting into two tools (D) doubles the maintenance surface and does nothing to fix the separate recurrence-formatting problem. Core principle: schemas enforce structure; examples teach convention — use input_examples when the failure is about usage patterns a schema can't express."
   },
   {
-    "domain": 3,
+    "domain": 2,
     "scenario": "A team packages two things for Claude Code: (1) a \"release notes\" procedure that reads recent commits and produces a formatted changelog using only reasoning over already-available file contents, and (2) an \"environment diagnostics\" capability that needs to run a chain of shell commands, parse structured output, and compute derived metrics before Claude reasons over the result.",
     "question": "How should these be packaged, given Claude Code's Agent Skills and code execution support?",
     "options": {
@@ -5030,7 +5030,7 @@
     "explanation": "Human-in-the-loop placement should be proportional to blast radius, not applied uniformly. Reserving approval for irreversible or high-consequence changes keeps the gate meaningful and stops reviewer fatigue from training people to rubber-stamp. B preserves the volume problem and adds latency. C removes oversight from exactly the cases that need it. D makes self-reported confidence the only control on high-risk actions, which is an unreliable gate. Route by consequence and reversibility."
   },
   {
-    "domain": 3,
+    "domain": 2,
     "scenario": "[Scenario 2: Claude Code Team Setup] A team packages its incident-response runbook as an Agent Skill. The SKILL.md body is 40 lines, but it references three long reference files (a 900-line escalation matrix, a query cookbook, and a postmortem template). Engineers complain that unrelated sessions now carry the whole runbook.",
     "question": "How should the skill be structured?",
     "options": {
@@ -5043,7 +5043,7 @@
     "explanation": "Progressive disclosure is the point of the skill format: only the frontmatter description is always in context, the SKILL.md body loads when the skill is triggered, and bundled files load only when the model reads them. Pointing to reference files by path preserves that. B defeats progressive disclosure. C is worse - CLAUDE.md is always-on context for every session, which is precisely the complaint. D fragments one workflow into three discovery decisions without fixing the size problem inside each. Match the loading tier to how often the content is actually needed."
   },
   {
-    "domain": 3,
+    "domain": 2,
     "scenario": "[Scenario 2: Claude Code Team Setup] A repo has ~/.claude/CLAUDE.md (user preferences: 'always use pnpm'), a root CLAUDE.md ('this repo uses npm'), and services/api/CLAUDE.md ('this service uses yarn'). An engineer runs Claude Code from the repo root and asks it to add a dependency to services/api.",
     "question": "Which package manager guidance governs, and why?",
     "options": {
@@ -5056,7 +5056,7 @@
     "explanation": "The CLAUDE.md hierarchy resolves from general to specific: enterprise and user level, then project root, then directory-scoped files nearer the work. The file closest to the files being edited is the most specific statement of intent and governs there. B inverts the order - user files set defaults, projects override them for project work. C misstates directory files, which are loaded when work touches that subtree. D is wrong: precedence is defined, not incidental. This is a Domain 3 staple; expect a conflict across at least two levels."
   },
   {
-    "domain": 3,
+    "domain": 2,
     "scenario": "[Scenario 2: Claude Code Team Setup] Onboarding docs currently put four things in the root CLAUDE.md: the build command, an ANTHROPIC_API_KEY value, the team's code-style rules, and a note that one engineer's IDE needs a Vim keybinding extension.",
     "question": "Which items are correctly placed, and what should happen to the others?",
     "options": {
@@ -5069,7 +5069,7 @@
     "explanation": "CLAUDE.md carries shared, durable, project-scoped facts that every contributor benefits from - how to build, how the team writes code. Secrets belong in environment variables or a secret manager; a committed key is a credential leak regardless of convenience. Individual tooling preferences belong at the user level so they do not impose on teammates. C is wrong on style: hooks can enforce formatting, but describing conventions in context still improves generated code. D destroys the shared baseline. Know what belongs at which tier - and that secrets belong at none of them."
   },
   {
-    "domain": 3,
+    "domain": 2,
     "scenario": "[Scenario 4: Developer Productivity] A developer asks Claude Code to migrate an authentication module across 14 files with interlocking imports. Previous attempts edited files one at a time and left the tree broken halfway through when an assumption turned out to be wrong.",
     "question": "Which workflow is the best fit?",
     "options": {
@@ -5082,7 +5082,7 @@
     "explanation": "Plan mode separates read-only investigation from mutation: the agent explores the codebase and proposes a plan, the human corrects wrong assumptions while the cost of being wrong is a paragraph rather than a broken tree, and only then does it execute. That directly addresses 'the assumption was wrong halfway through.' B removes the friction that was catching the problem. C is not how edits work and would not make them atomic anyway. D fans out a change whose whole difficulty is cross-file coupling - the subagents cannot see each other's decisions. Plan-then-execute for wide, interdependent changes."
   },
   {
-    "domain": 4,
+    "domain": 3,
     "scenario": "[Scenario 6: Structured Data Extraction] A pipeline extracts invoice fields. The prompt asks for JSON in a fenced code block. About 3% of responses include a preamble sentence or a trailing note, and downstream JSON parsing fails.",
     "question": "What is the most reliable fix?",
     "options": {
@@ -5095,7 +5095,7 @@
     "explanation": "Structured output is a schema problem, not a wording problem. Routing extraction through a tool definition (or the structured-output path) makes the API enforce shape, which removes the class of failure rather than reducing its rate. B and D reduce the 3% but leave a tail that will still break production. C is a fragile heuristic that silently corrupts output when a field value contains braces, and it hides the failure instead of surfacing it. Prefer schema enforcement over prose instruction whenever the consumer is a parser."
   },
   {
-    "domain": 4,
+    "domain": 3,
     "scenario": "[Scenario 6: Structured Data Extraction] Every extracted record now passes JSON schema validation, yet finance reports bad data: invoice_total values that do not equal the sum of line items, and dates like '2026-13-45' that pass a string-typed field.",
     "question": "What should the architect add?",
     "options": {
@@ -5108,7 +5108,7 @@
     "explanation": "Schema validation proves shape; it cannot prove that values are correct or mutually consistent. Business-rule checks (totals reconcile, dates are real dates, currency matches the vendor) belong in a distinct layer, with a bounded retry that feeds the specific violation back to the model and a terminal escalation path when retries fail. B improves date typing somewhat but can never express cross-field arithmetic. C is expensive, unbounded, and has no ground truth - two models disagreeing does not identify which is right. D may help marginally but is not a check. Two-stage validation - structural then semantic - is the expected answer."
   },
   {
-    "domain": 4,
+    "domain": 3,
     "scenario": "[Scenario 6: Structured Data Extraction] The extractor handles clean invoices well but mislabels ambiguous cases: credit memos, invoices with a zero total, and multi-currency documents. The team has 6 few-shot examples, all of them straightforward invoices.",
     "question": "How should the examples be revised?",
     "options": {
@@ -5121,7 +5121,7 @@
     "explanation": "Few-shot examples teach boundaries. Examples clustered in the easy middle of the distribution add little once the pattern is established; the leverage is in cases where the correct answer is genuinely non-obvious. Curating boundary examples that demonstrate the desired resolution is the standard fix for edge-case errors. B adds tokens and reinforces what already works. C discards a mechanism that is especially good at conveying tacit conventions. D changes placement, not content, and does not address ambiguity. Choose examples by what they disambiguate, not by count."
   },
   {
-    "domain": 4,
+    "domain": 3,
     "scenario": "[Scenario 1: Customer Support Resolution Agent] Support summaries must always open with the ticket ID line in a fixed format. The model usually complies but sometimes adds a friendly opener first, and occasionally keeps writing past the summary into unsolicited advice.",
     "question": "Which combination best enforces the required shape?",
     "options": {
@@ -5134,7 +5134,7 @@
     "explanation": "Prefilling puts the required opening tokens in the assistant turn so the model continues from them rather than deciding how to start - the friendly opener becomes impossible. A stop sequence terminates generation at the delimiter, cutting the trailing advice at the source. Together they constrain both ends. B is instruction repetition with no guarantee. C truncates mid-sentence rather than at a semantic boundary. D fixes the symptom downstream and still pays for the wasted tokens. Prefill controls the start, stop sequences control the end."
   },
   {
-    "domain": 2,
+    "domain": 4,
     "scenario": "[Scenario 1: Customer Support Resolution Agent] An MCP server exposes book_appointment. Roughly a third of calls fail because the customer never stated a preferred time, and the model invents one. The architect wants the server to obtain the missing value from the user at call time rather than guessing.",
     "question": "Which MCP capability fits?",
     "options": {
@@ -5147,7 +5147,7 @@
     "explanation": "Elicitation is the MCP primitive for a server to request additional information from the user through the client during a request, which is exactly 'ask the human for the missing time instead of hallucinating one.' Sampling is the inverse direction - the server asking the client's LLM for a completion - and would produce another guess, not a fact. Resources expose readable context, which helps only if availability is already known and does not capture preference. Roots communicate filesystem or URI boundaries the server may operate within. Keep the primitives and their directions straight: tools (model-invoked actions), resources (readable context), prompts (user-invoked templates), and the sampling and elicitation server-to-client requests."
   },
   {
-    "domain": 2,
+    "domain": 4,
     "scenario": "[Scenario 4: Developer Productivity] A filesystem MCP server is used across several repos on a shared workstation. The team wants the server to operate only inside the workspace the user currently has open, without hardcoding paths per user or granting the server the whole home directory.",
     "question": "Which mechanism addresses this?",
     "options": {
@@ -5160,7 +5160,7 @@
     "explanation": "Roots are the MCP mechanism by which a client tells a server which URIs or directories are in scope, so boundaries follow the user's actual workspace instead of static configuration. B relies on the model to respect a description - a boundary enforced by persuasion is not a boundary. C is the hardcoding the team wants to avoid and scales badly. D is after-the-fact cleanup of an action that already happened, which is not a security control. Access boundaries belong in the protocol and host layer, not in tool prose."
   },
   {
-    "domain": 2,
+    "domain": 4,
     "scenario": "[Scenario 1: Customer Support Resolution Agent] When the order-lookup tool receives an unknown order ID, it returns the string 'Error'. The agent responds by retrying the same ID up to the loop cap, then tells the customer the system is down - even when the real problem is a typo in the ID.",
     "question": "How should the tool's failure response be redesigned?",
     "options": {
@@ -5173,7 +5173,7 @@
     "explanation": "A tool result is context the model reasons over, so errors must be self-describing: what failed, whether retrying could help, and the appropriate recovery action. That converts a blind retry loop into a clarifying question. B is actively misleading - 'no matches' and 'invalid ID' warrant different responses, and it erases the distinction. C turns a routine, recoverable condition into a hard failure and gives the model nothing to act on. D patches one symptom with a prompt while leaving every other caller uninformed. Design failure responses as deliberately as success responses."
   },
   {
-    "domain": 2,
+    "domain": 4,
     "scenario": "[Scenario 4: Developer Productivity] A team's internal MCP server has grown to 38 tools spanning deploys, log search, ticket management, and metrics. Agents now pick the wrong tool frequently, and the tool definitions alone consume a large share of the context window before any work starts.",
     "question": "What is the best architectural response?",
     "options": {
@@ -5277,7 +5277,7 @@
     "explanation": "The loop is gather context, take action, verify work, and this agent skips straight to action - it is guessing from metadata instead of reading evidence that is freely available. Enforcing context gathering first is the direct fix. B reasons harder over the same absent information. C widens blast radius without improving grounding. D is a useful verification safety net but treats symptoms: it detects bad edits after they are made rather than preventing edits made without evidence. Note that D would be the right answer to a verify-phase question - read which phase the scenario actually omits."
   },
   {
-    "domain": 2,
+    "domain": 4,
     "scenario": "[Scenario 4: Developer Productivity] A developer configures a personal MCP server that points at their own sandbox account and commits the configuration so 'the team can see how it works.' Teammates now get connection failures on startup, and one teammate's session picked up the developer's sandbox credentials path.",
     "question": "Where should this server have been configured?",
     "options": {
@@ -5290,7 +5290,7 @@
     "explanation": "MCP configuration is scoped deliberately: project scope (.mcp.json committed at the repo root) is shared team configuration and should contain only servers every contributor needs; user scope is personal and machine-local. A personal sandbox server belongs at user scope, and committing it imposes a broken dependency plus a credential-path leak on everyone else. B still ships personal configuration to the team. C mistakes 'committed' for 'correct' - reproducibility applies to shared dependencies. D documents a server without configuring it, which does not make it usable. Match the scope to the audience."
   },
   {
-    "domain": 2,
+    "domain": 4,
     "scenario": "[Scenario 1: Customer Support Resolution Agent] A team is building a new remote MCP server that several agents will reach over the network, with multiple concurrent sessions and a need to survive brief disconnects. An engineer proposes HTTP+SSE because an older internal server uses it.",
     "question": "Which transport should the new server use?",
     "options": {
@@ -5303,7 +5303,7 @@
     "explanation": "For remote MCP servers, Streamable HTTP is the current recommended transport; the older HTTP+SSE transport is kept for backward compatibility with servers already deployed on it rather than chosen for new work. B optimizes for internal consistency over the protocol's direction and inherits the older transport's session-resumption limitations. C is wrong on scope: stdio is for local subprocess servers on the same machine and cannot serve remote clients at all. D is false - transport choice affects session handling and reconnection, which is exactly what this workload needs. Know which transport goes with local versus remote."
   },
   {
-    "domain": 3,
+    "domain": 2,
     "scenario": "[Scenario 2: Claude Code Team Setup] An engineer writes a deployment-runbook skill and saves it to ~/.claude/skills/deploy-runbook/SKILL.md. It works for them. Two weeks later a teammate handling an incident cannot get Claude Code to use the runbook at all, even after asking for it by name.",
     "question": "What is the problem?",
     "options": {
@@ -5316,7 +5316,7 @@
     "explanation": "Skill placement follows the same personal-versus-shared split as the rest of Claude Code configuration: ~/.claude/skills/ is personal to one machine and one user, while a project's .claude/skills/ directory is committed with the repo so every contributor gets it. An incident runbook is shared knowledge and belongs in the project. B invents a registration step - skills are discovered from their directories. C is wrong: skills are matched and invoked by the model from their description, and can also be invoked explicitly. D is not the failure here - the teammate has no copy of the file at all. Placement determines audience."
   },
   {
-    "domain": 3,
+    "domain": 2,
     "scenario": "[Scenario 2: Claude Code Team Setup] A team has a rotate-production-credentials skill. It must remain available for an engineer to run deliberately, but the model must never decide on its own that rotating credentials is a reasonable next step during unrelated work.",
     "question": "Which configuration expresses this?",
     "options": {
@@ -5329,7 +5329,7 @@
     "explanation": "Skill frontmatter carries the enforcement levers: disable-model-invocation removes the skill from autonomous invocation while leaving it available to a human who asks for it by name, and allowed-tools bounds what it can touch if it does run. That is a configuration-level guarantee rather than a request. B is prompt text inside a file the model has already chosen to open - too late and non-binding. C degrades discovery for humans too and is a side effect being used as a control. D abandons the skill mechanism entirely and reintroduces copy-paste drift. When a capability must be human-initiated, say so in frontmatter."
   },
   {
-    "domain": 4,
+    "domain": 3,
     "scenario": "[Scenario 6: Structured Data Extraction] A team improves its extraction prompt whenever someone reports a bad record. Each change is judged by re-running the two documents from the complaint. Accuracy on those two always improves, yet overall quality has drifted downward over six months.",
     "question": "What evaluation practice is missing?",
     "options": {
@@ -5342,7 +5342,7 @@
     "explanation": "Tuning against the two documents in the latest complaint is overfitting to the last failure; nothing measures the regressions each change introduces elsewhere, which is exactly the observed six-month drift. A held-out labeled set spanning the real distribution, re-run on every change and compared to a baseline, turns prompt edits into measurable changes rather than anecdotes. B changes the model without ever learning whether quality moved. C uses an unanchored preference judgment with no ground truth as the acceptance test. D is the reactive loop the team already has - it detects failures after customers find them and still provides no regression signal. Evaluate against a stable set, not against the last bug."
   },
   {
-    "domain": 4,
+    "domain": 3,
     "scenario": "[Scenario 6: Structured Data Extraction] A classification prompt carries 22 few-shot examples, 18 of which are near-identical straightforward cases. The prompt is expensive, and accuracy on unusual documents has not improved as examples were added.",
     "question": "How should the example set be revised?",
     "options": {
@@ -5355,7 +5355,7 @@
     "explanation": "Few-shot value comes from coverage and diversity, not volume: a small number of well-chosen examples spanning distinct cases outperforms a long list of near-duplicates, which pay tokens on every call to restate a pattern the model already learned from the first two. B scales the cost and the redundancy together. C discards a mechanism that conveys conventions prose struggles to pin down. D does not reduce cost at all - the tokens are charged regardless of position, and moving them can weaken their effect. Curate for distinctness; add an example when it teaches something no existing example teaches."
   },
   {
-    "domain": 4,
+    "domain": 3,
     "scenario": "[Scenario 5: Claude Code for CI/CD] A review agent is told to 'flag anything that looks risky.' It reports inconsistently: the same class of change is flagged on one PR and ignored on the next, and reviewers cannot predict what it will surface.",
     "question": "What is the most effective prompt change?",
     "options": {
@@ -5628,5 +5628,226 @@
     },
     "answer": "B",
     "explanation": "Reliable agent systems separate durable state from transient conversation. Anything that must survive compaction, session boundaries, or concurrent access has to live in an external system of record the agent reaches through tools; the context window is a working buffer with lossy retention, not a database. Tuning the compaction threshold or forbidding compaction only postpones the loss and does nothing for the cross-session disagreement, which is a shared-state problem no single-session setting can solve."
+  },
+  {
+    "domain": 1,
+    "scenario": "[Scenario 2: Code Generation with Claude Code] A team defines a security-reviewer subagent in .claude/agents/security-reviewer.md. Its frontmatter has only name and description, and its system prompt says 'You are strictly read-only. Never modify files.' During a review the subagent finds a SQL injection and edits the file to 'fix' it, which breaks a migration nobody asked it to touch.",
+    "question": "What is the most reliable fix?",
+    "options": {
+      "A": "Rewrite the system prompt in capitals with an explicit list of forbidden actions and a warning about consequences",
+      "B": "Add a PostToolUse hook that runs git checkout on any file the subagent edits",
+      "C": "Add a tools allowlist such as `tools: Read, Grep, Glob` to the frontmatter — when tools is omitted the subagent inherits the full tool pool available to subagents, including Edit and Write",
+      "D": "Set `model: haiku` so the subagent is less likely to take initiative beyond its instructions"
+    },
+    "answer": "C",
+    "explanation": "A subagent definition without a tools field inherits every tool available to subagents, so a 'read-only' role enforced only by prompt text is a request, not a boundary. Scoping the tool set in frontmatter (an allowlist via tools, or a denylist via disallowedTools) makes the edit impossible rather than discouraged. A reverting PostToolUse hook acts after the damage and races with other work; a smaller model does not remove the capability."
+  },
+  {
+    "domain": 1,
+    "scenario": "[Scenario 3: Multi-Agent Research System] An orchestrator subagent is meant to delegate only to two specialist subagents, worker and researcher, both of which have narrowly scoped tools. In production it sometimes spawns a general-purpose subagent that has broad write access, bypassing the specialists' restrictions. Its tools field currently lists Agent, Read, Bash.",
+    "question": "How should the architect constrain delegation?",
+    "options": {
+      "A": "Change the tools entry to `Agent(worker, researcher), Read, Bash` so the Agent tool can spawn only those two subagent types",
+      "B": "Add `disallowedTools: Agent` to the orchestrator so it cannot spawn a general-purpose subagent",
+      "C": "Set CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=0 in the project settings",
+      "D": "Add 'Always prefer worker or researcher' to the orchestrator's description field"
+    },
+    "answer": "A",
+    "explanation": "Claude Code lets a tools allowlist restrict which subagent types the Agent tool may spawn, e.g. Agent(worker, researcher); other types are blocked. That enforces the delegation topology in configuration. Denying Agent entirely or setting spawn depth to 0 removes nesting altogether, so the orchestrator can no longer delegate to the specialists it needs. Description wording influences when others delegate to this agent; it does not constrain what this agent spawns."
+  },
+  {
+    "domain": 1,
+    "scenario": "[Scenario 4: Developer Productivity] After two hours in a Claude Code session, a developer and Claude have settled several constraints in conversation: which modules are frozen, a naming scheme, and a rejected approach. The developer now wants a broad exploratory investigation across dozens of files, but does not want all those file reads to flood the main context. A regular (non-fork) subagent they tried ignored the agreed constraints and re-proposed the rejected approach.",
+    "question": "Why did the regular subagent fail, and what fits better?",
+    "options": {
+      "A": "The subagent did not load CLAUDE.md; enable CLAUDE.md loading for subagents in settings",
+      "B": "A non-fork subagent starts with a fresh context that does not include the conversation history, so decisions made only in chat are invisible to it; a fork inherits the full conversation, while its intermediate tool calls stay isolated and only its final result returns",
+      "C": "The subagent exceeded its context window; raise maxTurns so it has more room",
+      "D": "Subagents cannot read files the parent has already read; run the investigation in the main conversation instead"
+    },
+    "answer": "B",
+    "explanation": "Non-fork subagents load their own system prompt, the delegation message, and the CLAUDE.md hierarchy, but not the conversation history, previously invoked skills, or files already read. Constraints that exist only in chat must either be passed explicitly in the delegation message or the task should run as a fork, which inherits the parent conversation while keeping its exploration out of the main context. CLAUDE.md does load for regular subagents, so A misdiagnoses; running in the main conversation defeats the goal of keeping context clean."
+  },
+  {
+    "domain": 1,
+    "scenario": "[Scenario 5: Claude Code for CI/CD] A nightly job runs `claude -p ... --output-format stream-json` and the main agent delegates to several subagents, some of which spawn their own subagents. When a run makes an unexpected destructive tool call, the on-call engineer cannot tell which agent in the tree issued it.",
+    "question": "What is the most reliable way to attribute tool calls to agents?",
+    "options": {
+      "A": "Instruct every subagent to prefix its tool inputs with its own name",
+      "B": "Run each subagent as a separate `claude -p` process so logs are naturally separated",
+      "C": "Parse assistant text blocks for phrases like 'As the researcher, I will...' to infer the author",
+      "D": "Group stream events by parent_tool_use_id: main-conversation messages carry null, subagent messages carry the ID of the Agent tool call that spawned them, and nested subagents carry their own spawning call's ID, so the full tree can be rebuilt"
+    },
+    "answer": "D",
+    "explanation": "In stream-json output, subagent assistant and user messages carry parent_tool_use_id set to the spawning Agent tool call, with null for the main conversation, and this holds at every nesting depth. That is a structural, machine-readable link, which is what observability needs. Prompt-based prefixes and parsing natural language are unreliable, and splitting into separate processes throws away the orchestration the job relies on."
+  },
+  {
+    "domain": 2,
+    "scenario": "[Scenario 4: Developer Productivity] A developer wants Claude Code to know their personal sandbox URL and preferred test fixtures for one specific repo. Teammates use different sandboxes. They first put the details in the repo's CLAUDE.md, and a teammate's session started hitting the wrong sandbox. Moving them to ~/.claude/CLAUDE.md made the sandbox URL appear in sessions for every other project too.",
+    "question": "Where should these instructions live?",
+    "options": {
+      "A": "In ./CLAUDE.local.md at the project root, added to .gitignore — it loads alongside CLAUDE.md for this project only and is not shared through source control",
+      "B": "In .claude/rules/sandbox.md with no paths frontmatter",
+      "C": "In the managed policy CLAUDE.md so it cannot be excluded",
+      "D": "In ~/.claude/CLAUDE.md under a heading naming the repo, trusting Claude to apply it only there"
+    },
+    "answer": "A",
+    "explanation": "Claude Code's memory scopes map to exactly this decision: project CLAUDE.md is team-shared via version control, ~/.claude/CLAUDE.md applies to you across all projects, and CLAUDE.local.md is personal and project-specific, intended to be gitignored. Project rules in .claude/rules/ are committed and shared like CLAUDE.md. Managed policy is organization-wide. Relying on a heading inside user-level memory keeps the content loaded everywhere and depends on the model to ignore it."
+  },
+  {
+    "domain": 2,
+    "scenario": "[Scenario 2: Claude Code Team Setup] A root CLAUDE.md has grown to 700 lines, most of it frontend and database conventions that matter only when editing those areas. To cut per-session token cost, a developer moves the sections into docs/frontend.md and docs/db.md and replaces them with `@docs/frontend.md` and `@docs/db.md` lines. Session startup context is essentially unchanged.",
+    "question": "Why did this not help, and what would?",
+    "options": {
+      "A": "@ imports only work with absolute paths; switch to absolute paths so they load lazily",
+      "B": "Imports have a maximum depth of one hop; flatten the files into a single import",
+      "C": "Imported files are expanded and loaded at launch along with the CLAUDE.md that references them, so splitting helps organization but not context size; move the area-specific content into .claude/rules/ files with paths frontmatter so each loads only when Claude reads matching files",
+      "D": "Wrap the import lines in backticks so Claude fetches the files only when it needs them"
+    },
+    "answer": "C",
+    "explanation": "Claude Code documents that @path imports are loaded into context at launch, so they do not reduce context consumption. Path-scoped rules (.claude/rules/*.md with a paths glob) load only when Claude works with matching files, which is the mechanism for area-specific guidance; skills are the option for procedures needed only on demand. Relative and absolute imports both work, recursive imports go up to four hops, and backticks make the reference literal text rather than a lazy import."
+  },
+  {
+    "domain": 2,
+    "scenario": "[Scenario 5: Claude Code for CI/CD] A code-review step runs `claude -p` on shared CI runners. Results differ between runners: on one, a hook from a maintainer's ~/.claude config reformats files mid-run; on another, an MCP server from the repo's .mcp.json connects and the agent calls it unexpectedly. The team wants identical behavior on every machine.",
+    "question": "What is the recommended approach?",
+    "options": {
+      "A": "Delete ~/.claude from every runner at the start of each job and keep .mcp.json out of the repo",
+      "B": "Run with `--bare`, which skips auto-discovery of hooks, skills, plugins, MCP servers, auto memory, and CLAUDE.md, and pass everything the job needs explicitly via flags such as --append-system-prompt, --settings, --mcp-config, and --allowedTools",
+      "C": "Add a line to CLAUDE.md telling Claude to ignore hooks and MCP servers in CI",
+      "D": "Pin the Claude Code version on all runners so discovery behaves the same way"
+    },
+    "answer": "B",
+    "explanation": "Without --bare, claude -p loads the same context an interactive session would, including configuration in the working directory and ~/.claude, and it shows no trust dialog. Bare mode is documented as the choice for CI and scripts that need the same result on every machine: nothing is auto-discovered, and the job declares its own prompt additions, settings, MCP servers, and tool permissions. Scrubbing runners is brittle, a CLAUDE.md instruction cannot disable hooks, and version pinning does not change what gets discovered."
+  },
+  {
+    "domain": 2,
+    "scenario": "[Scenario 2: Claude Code Team Setup] A security team must guarantee that no developer's Claude Code session can read files under secrets/ or run `terraform apply`, on every managed laptop and in every repository. Their draft places 'Never read secrets/ and never run terraform apply' in the managed policy CLAUDE.md deployed via MDM.",
+    "question": "What should the architect change?",
+    "options": {
+      "A": "Nothing — managed policy CLAUDE.md cannot be excluded by users, so the rule is already enforced",
+      "B": "Move the rule into each repository's project CLAUDE.md so it sits closer to the code",
+      "C": "Add the rule to every developer's ~/.claude/CLAUDE.md as well, for redundancy",
+      "D": "Enforce the restriction with permissions.deny rules in managed settings, which the client applies regardless of what Claude decides, and keep managed CLAUDE.md for behavioral guidance such as coding and compliance reminders"
+    },
+    "answer": "D",
+    "explanation": "Managed CLAUDE.md cannot be excluded, but it is still context: it shapes behavior without being a hard enforcement layer. Claude Code's documentation splits the concerns explicitly — block tools, commands, or file paths with managed settings permissions.deny, and use managed CLAUDE.md for style, compliance reminders, and behavioral instructions. Duplicating the instruction in more memory files adds no enforcement."
+  },
+  {
+    "domain": 3,
+    "scenario": "[Scenario 5: Claude Code for CI/CD] A CI script runs `claude -p \"List the risky changes in this diff\" --output-format json` and then uses a regex over the `result` text to pull out file paths and severities. About 5% of runs break the parser because the wording or ordering of the prose changes.",
+    "question": "What is the best fix?",
+    "options": {
+      "A": "Add --json-schema with a JSON Schema for the findings and read the conforming object from the `structured_output` field of the JSON response",
+      "B": "Add 'Respond only in the exact format FILE|SEVERITY on each line' to the prompt and keep the regex",
+      "C": "Switch to --output-format stream-json and concatenate text deltas before applying the regex",
+      "D": "Retry the call whenever the regex fails to match, up to three times"
+    },
+    "answer": "A",
+    "explanation": "For claude -p, combining --output-format json with --json-schema returns output conforming to the schema in the structured_output field, alongside session metadata; the plain text stays in result. That replaces parsing free-form prose with a schema contract. Format instructions in the prompt are probabilistic, streaming changes delivery rather than structure, and blind retries only lower the failure rate while tripling cost on bad runs."
+  },
+  {
+    "domain": 3,
+    "scenario": "[Scenario 6: Structured Data Extraction] A contact-extraction job uses `claude -p` with --json-schema. The schema declares `\"contact_email\": {\"type\": \"string\", \"format\": \"email\"}`. Every response conforms to the schema, yet downstream mail sends bounce because some contact_email values are strings like 'see signature block' or 'N/A'.",
+    "question": "What explains this and what should the team do?",
+    "options": {
+      "A": "The schema is invalid; Claude Code silently falls back to unstructured text when a schema contains format",
+      "B": "Claude Code treats the format keyword as an annotation and does not enforce it, so the team should validate values in code (e.g. email syntax, and null when absent) and send failures back for a retry with the validation error",
+      "C": "format must be combined with strict: true on the schema to be enforced",
+      "D": "Replace format with a longer description string explaining what an email looks like; descriptions are enforced"
+    },
+    "answer": "B",
+    "explanation": "Claude Code accepts schemas that use format but treats it as an annotation it does not enforce, so a string that is not an email still satisfies the schema. This is the general rule that schemas guarantee structure, not semantic correctness: production pipelines add programmatic validation and a retry loop that feeds the specific error back. The schema was valid (an invalid schema now fails with an explicit error), and descriptions guide rather than enforce."
+  },
+  {
+    "domain": 3,
+    "scenario": "[Scenario 1: Customer Support Resolution Agent] A support app shows agents a one-sentence explanation of what Claude is about to do before each lookup. To guarantee the lookup always happens, the team sets tool_choice to {\"type\": \"tool\", \"name\": \"lookup_order\"}. The tool call now always happens, but the explanation text never appears, even though the prompt explicitly asks for it.",
+    "question": "What is happening and what is the recommended approach?",
+    "options": {
+      "A": "The explanation is being placed in a thinking block; enable thinking display in the UI",
+      "B": "The system prompt is too long; move the explanation request to the end of the system prompt",
+      "C": "With tool_choice any or tool, the API prefills the assistant turn to force a tool call, so no natural-language text is emitted before the tool_use block; use tool_choice auto and add an explicit instruction in the user message to use lookup_order",
+      "D": "Add a stop sequence after the explanation so the model returns control before calling the tool"
+    },
+    "answer": "C",
+    "explanation": "Anthropic's tool-use docs note that forced tool choice prefills the assistant message, so the model will not produce explanatory text before tool_use content even when asked. When you want both commentary and a particular tool, the documented approach is tool_choice auto plus an explicit instruction in the user message. Stop sequences and prompt placement do not change the prefill behavior."
+  },
+  {
+    "domain": 4,
+    "scenario": "[Scenario 6: Structured Data Extraction] A create_shipment tool has a nested, format-sensitive input (address object, ISO-8601 pickup window, optional customs block). To teach usage, a developer adds input_examples to the tool definition, including one 'incomplete' example that omits the required address field to illustrate a common mistake. Every request now fails with a 400 error.",
+    "question": "What is the correct fix?",
+    "options": {
+      "A": "Keep only examples that are valid against the tool's input_schema — each input example must validate, so show optional-field variations with valid examples and describe mistakes to avoid in the tool description",
+      "B": "Move input_examples into the system prompt as XML so the API does not validate them",
+      "C": "Mark address as optional in input_schema so the illustrative example validates",
+      "D": "Set strict: true on the tool so invalid examples are ignored"
+    },
+    "answer": "A",
+    "explanation": "The input_examples field must contain examples that are valid according to the tool's input_schema; an invalid example causes a 400 error. Examples exist to show well-formed calls — when to include optional parameters, which formats to use — while the description is where you explain caveats and when not to use the tool. Loosening the schema to fit a bad example weakens validation for real calls, and strict mode does not ignore invalid examples."
+  },
+  {
+    "domain": 4,
+    "scenario": "[Scenario 4: Developer Productivity] An internal agent built on the Messages API aggregates tools from GitHub and Jira. Both integrations were written independently and each exposes tools named search, create_issue, and add_comment, disambiguated only by a sentence in the description. Claude frequently files Jira tickets in GitHub and vice versa.",
+    "question": "What tool-design change addresses the root cause?",
+    "options": {
+      "A": "Put the GitHub tools first in the tools array so they win ties",
+      "B": "Prefix tool names with the service, such as github_create_issue and jira_create_issue, so selection is unambiguous from the name itself, and keep descriptions specific about when each applies",
+      "C": "Merge all six tools into one tool with a free-text `target` parameter",
+      "D": "Add a classifier call before every turn that predicts which service the user means"
+    },
+    "answer": "B",
+    "explanation": "Anthropic's tool-definition guidance recommends meaningful namespacing: when tools span multiple services, prefix names with the service so selection is unambiguous as the library grows, which also matters for tool search. Array order is not a selection mechanism, a free-text target parameter moves the ambiguity into an unvalidated string, and an extra classifier adds latency and a second failure point without fixing the colliding names."
+  },
+  {
+    "domain": 4,
+    "scenario": "[Scenario 1: Customer Support Resolution Agent] A get_order tool returns the raw database row: 60 fields including internal foreign keys such as cust_fk=88213 and status_cd=7, audit timestamps, and serialized blobs. Tool results consume a large share of context, and Claude sometimes quotes status_cd=7 to customers or passes the wrong internal key to follow-up tools.",
+    "question": "How should the tool response be redesigned?",
+    "options": {
+      "A": "Keep the raw row but add a system-prompt glossary explaining every internal code",
+      "B": "Truncate the response to the first 2,000 characters",
+      "C": "Return only the high-signal fields Claude needs for the next step, using semantic, stable identifiers and readable values (e.g. an order ID and status 'shipped') instead of opaque internal references",
+      "D": "Return the row as base64 so it uses fewer tokens and Claude cannot quote internal codes"
+    },
+    "answer": "C",
+    "explanation": "Tool responses are context. Anthropic's guidance is to return only high-signal information with semantic, stable identifiers such as slugs or UUIDs rather than opaque internal references, including just the fields Claude needs to reason about its next step. A glossary still spends tokens on 60 fields and relies on translation, truncation drops fields arbitrarily, and base64 makes the data unusable to the model."
+  },
+  {
+    "domain": 5,
+    "scenario": "[Scenario 4: Developer Productivity] A team relies on Claude Code auto memory in a long-lived repo. Over months MEMORY.md has grown to about 400 one-paragraph entries. Developers notice Claude has 'forgotten' preferences recorded in the second half of the file, though the text is still there.",
+    "question": "What is the cause and the right correction?",
+    "options": {
+      "A": "Auto memory is per-worktree, so entries saved in other worktrees are invisible; consolidate worktrees",
+      "B": "Only the first 200 lines or 25KB of MEMORY.md load at session start; keep MEMORY.md as a concise one-line-per-entry index and move details into topic files Claude reads on demand, merging or dropping stale entries",
+      "C": "Auto memory expires with the transcript retention period; raise cleanupPeriodDays",
+      "D": "Move all 400 entries into the project CLAUDE.md, which has no size limit on what is followed"
+    },
+    "answer": "B",
+    "explanation": "Claude Code loads the first 200 lines or 25KB of MEMORY.md, whichever comes first; anything beyond is not loaded at session start. The documented design is an index with one line per memory, detailed notes in topic files read on demand, and periodic pruning. Auto memory is shared across worktrees of the same repo and is excluded from the transcript retention sweep. Dumping everything into CLAUDE.md trades one problem for another: long CLAUDE.md files consume more context and reduce adherence."
+  },
+  {
+    "domain": 5,
+    "scenario": "[Scenario 4: Developer Productivity] Early in a long Claude Code session a developer typed 'Do not touch anything under legacy/billing/'. Hours later, after running /compact, Claude edits a file in legacy/billing/. The conventions in the project-root CLAUDE.md are still being followed correctly after compaction.",
+    "question": "What best explains this, and what is the durable fix?",
+    "options": {
+      "A": "The instruction was given only in conversation, so it could be lost in the compaction summary, while project-root CLAUDE.md is re-read from disk and re-injected after /compact; put the rule in CLAUDE.md, or enforce it with a permission deny rule or PreToolUse hook if it must never be violated",
+      "B": "/compact deletes all user messages; avoid compaction and start a new session instead",
+      "C": "CLAUDE.md always outranks conversation instructions; rephrase the chat instruction more forcefully after each compaction",
+      "D": "Compaction resets permission mode to bypassPermissions, which ignores user instructions"
+    },
+    "answer": "A",
+    "explanation": "Claude Code documents that project-root CLAUDE.md survives compaction because it is re-read and re-injected, whereas instructions given only in conversation depend on what the summary retains. The durable fix is to persist the rule in CLAUDE.md; and since CLAUDE.md is guidance rather than enforcement, a hard boundary belongs in permissions or a hook. Starting fresh sessions or repeating instructions just re-creates the fragile dependency on transcript content."
+  },
+  {
+    "domain": 5,
+    "scenario": "[Scenario 1: Customer Support Resolution Agent] An agent sends a large cached system prompt and tool definitions, plus a long cached conversation prefix. To enforce a verification step, the orchestrator alternates tool_choice between {\"type\": \"tool\", \"name\": \"verify_identity\"} and auto on consecutive turns. Cache-read tokens on the message history drop sharply and costs rise, even though the system prompt and tools never change.",
+    "question": "What is the most likely cause?",
+    "options": {
+      "A": "Forced tool choice disables prompt caching entirely for that request",
+      "B": "Cached tool definitions expire whenever a forced tool is called",
+      "C": "The cache TTL is too short; switch every breakpoint to the 1-hour TTL",
+      "D": "Changing tool_choice invalidates cached message blocks — tool definitions and the system prompt stay cached, but message content must be reprocessed — so gate verification in orchestrator code without toggling tool_choice every turn"
+    },
+    "answer": "D",
+    "explanation": "Anthropic's docs note that changes to the tool_choice parameter invalidate cached message blocks while tool definitions and system prompts remain cached. Flipping tool_choice every turn therefore forces the conversation prefix to be reprocessed repeatedly. Keeping tool_choice stable and enforcing the verification prerequisite in orchestration logic preserves the message cache. A longer TTL does not help when the cache key itself changes."
   }
 ]

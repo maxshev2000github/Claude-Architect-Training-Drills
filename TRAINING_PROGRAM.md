@@ -150,6 +150,7 @@ Score by domain. Next cycle: swap one deep-block week to your weakest domain.
 |---|---|---|---|---|
 | 2026-06-13 | Wk1 Day 6 quiz (10 mixed) | 9/10 (90%) | D4 — MCP transport | Only miss: SSE vs Streamable HTTP for remote multi-client server. |
 | 2026-07-26 | 20q D2+D3 | 16/20 (80%) | D2 — Claude Code Configuration & Workflows (6/9) | 4 missed: D2×3, D3×1; options shuffled: yes |
+| 2026-09-12 | 10q mixed | 10/10 (100%) | D1 — Agentic Architecture & Orchestration (4/4) | no misses; options shuffled: yes |
 
 ## Integration
 

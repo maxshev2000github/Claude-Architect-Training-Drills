@@ -5849,5 +5849,161 @@
     },
     "answer": "D",
     "explanation": "Anthropic's docs note that changes to the tool_choice parameter invalidate cached message blocks while tool definitions and system prompts remain cached. Flipping tool_choice every turn therefore forces the conversation prefix to be reprocessed repeatedly. Keeping tool_choice stable and enforcing the verification prerequisite in orchestration logic preserves the message cache. A longer TTL does not help when the cache key itself changes."
+  },
+  {
+    "domain": 1,
+    "scenario": "An orchestrator fans out four subagents, one per section of a long document. Three return complete results. The fourth fails with a permission error because the file it was assigned sits in a directory the agent's tool policy does not allow. The orchestrator is configured to keep going until it produces a full report.",
+    "question": "What should the orchestrator do?",
+    "options": {
+      "A": "Surface the partial failure to the user along with the three successful section results, and request direction before retrying the fourth section",
+      "B": "Reassign the failed section to one of the three subagents that already finished, since they are proven to work",
+      "C": "Broaden the agent's tool policy to include the blocked directory and retry automatically so the run can complete unattended",
+      "D": "Have the failed subagent write its error into the shared context and let the synthesis step note the gap in the final report"
+    },
+    "answer": "A",
+    "explanation": "A permission error is not a transient fault the agent can legitimately retry its way out of — it is a policy boundary, and crossing it is a human decision. The correct reliability pattern is to escalate: return the partial results that are valid, state precisely what failed and why, and wait for direction. B changes who runs the task but not the policy that blocked it, so it fails identically. C is the dangerous answer — an agent that widens its own permissions to clear an obstacle has defeated the guardrail's purpose. D silently degrades the deliverable: the report looks complete-ish while a section is missing, which is worse than a visible stop."
+  },
+  {
+    "domain": 1,
+    "scenario": "An agent uses a long-running server-side tool. On some turns the API returns a response with stop_reason 'pause_turn' instead of 'end_turn' or 'tool_use'. The developer's loop treats any response that is not 'tool_use' as a finished turn, records the text, and starts the next user request fresh. Users report the agent abandons long searches halfway and then answers from nothing.",
+    "question": "What is the correct handling for this stop_reason?",
+    "options": {
+      "A": "Continue the same turn by sending the paused response's content back as-is in a new request, letting the model resume the in-progress tool execution",
+      "B": "Treat 'pause_turn' as a rate-limit signal, back off exponentially, and resend the original user message",
+      "C": "Raise max_tokens, since 'pause_turn' means the response hit the output limit mid-tool-call",
+      "D": "Disable the server-side tool and reimplement it as a client-side tool so only 'tool_use' and 'end_turn' can occur"
+    },
+    "answer": "A",
+    "explanation": "'pause_turn' means the model paused a long-running turn, not that the turn ended. The loop resumes it by passing the returned content back unchanged in the next request so the model picks up where it left off. Treating it as terminal throws away the work in progress — exactly the reported symptom. B misreads it as throttling and resends the original message, restarting the search. C confuses it with 'max_tokens', a different stop_reason. D is a large rewrite to avoid handling one documented branch of the agentic loop; robust loops handle every stop_reason explicitly."
+  },
+  {
+    "domain": 1,
+    "scenario": "A hub-and-spoke system spawns eight research subagents. Each subagent is instructed to 'report everything you did' and returns its full working transcript — every search query, every raw page excerpt, and its reasoning. The orchestrator concatenates all eight into its own context before synthesizing. By the synthesis step the orchestrator's context is nearly full and the final answer quality drops sharply.",
+    "question": "What is the design error?",
+    "options": {
+      "A": "The subagents are returning their working context instead of a compact structured conclusion, defeating the context isolation that makes subagents worth using",
+      "B": "Eight subagents is too many; the fan-out should be reduced to three or four",
+      "C": "The orchestrator should run synthesis in a second pass over the same context after compaction",
+      "D": "Each subagent should use a smaller model so its transcript is shorter"
+    },
+    "answer": "A",
+    "explanation": "The point of a subagent is that exploration happens in an isolated context and only the conclusion crosses back. When every subagent returns its full transcript, the orchestrator absorbs all eight contexts and you get the token cost of delegation with none of the isolation benefit. The fix is a required return contract — findings, sources, confidence — not a transcript. B treats a symptom: the same flaw breaks at three subagents on longer documents. C papers over the flood with compaction after the fact, losing detail that never should have been sent. D changes who writes the transcript, not that the transcript is returned."
+  },
+  {
+    "domain": 1,
+    "scenario": "A user asks an orchestrator to 'clean up our reporting'. The orchestrator immediately decomposes this into five parallel subagent tasks: refactor the reporting module, rewrite the SQL views, redesign the dashboard, update the docs, and add tests. Each subagent adopts a different assumption about what 'reporting' means, and the results conflict irreconcilably.",
+    "question": "What should the orchestrator have done first?",
+    "options": {
+      "A": "Resolve the ambiguity with the user in a single clarification round before decomposing, since the decomposition itself encodes an interpretation",
+      "B": "Spawn the five subagents anyway but give each one the full conversation history so they converge on the same reading",
+      "C": "Run the five subagents sequentially so each sees the previous one's interpretation",
+      "D": "Spawn a sixth subagent to reconcile the conflicting outputs into one coherent plan"
+    },
+    "answer": "A",
+    "explanation": "Decomposition is not a neutral step — choosing the subtasks already commits to one reading of an ambiguous request, and every subagent then inherits that commitment plus its own gap-filling. Ambiguity is resolved before fan-out, not after. B gives each subagent the same ambiguous history and hopes for agreement; nothing in it selects an interpretation. C is slower and still assumes the first subagent's guess was right. D spends a full extra agent reconciling divergence that one clarifying question would have prevented, and it cannot recover work built on the wrong premise."
+  },
+  {
+    "domain": 2,
+    "scenario": "A developer must change how sessions are expired in an unfamiliar 200k-line legacy service. The change touches authentication, and the team requires that the intended approach be reviewed by a human before any file is modified. The developer currently just describes the task to Claude Code and watches the edits stream by.",
+    "question": "Which Claude Code capability fits this requirement?",
+    "options": {
+      "A": "Plan mode, which explores the codebase read-only and produces an approach for approval before any edit is executed",
+      "B": "A PreToolUse hook that logs every Edit call to a file the reviewer can read afterward",
+      "C": "Headless mode with --output-format json so the reviewer can diff the structured output",
+      "D": "A CLAUDE.md instruction telling Claude to always ask before editing authentication code"
+    },
+    "answer": "A",
+    "explanation": "Plan mode is exactly this control: Claude investigates using read-only tools and presents a plan, and nothing is written until a human approves. B logs edits that have already happened — review after the fact is not review before modification. C is for non-interactive automation and does not gate edits on approval. D is guidance, not enforcement; CLAUDE.md shapes behavior probabilistically and a hard review gate should not depend on the model choosing to comply."
+  },
+  {
+    "domain": 2,
+    "scenario": "During an interactive Claude Code session a developer asks a broad question: 'which modules still call the deprecated billing client, and what would each one need to change?' Answering it means grepping the whole repo and reading roughly forty files. The developer wants the answer without filling the session context with forty file dumps, because they intend to keep working in the same session afterward.",
+    "question": "What is the right approach?",
+    "options": {
+      "A": "Dispatch the search to a subagent via the Task tool, so the file reading happens in an isolated context and only the conclusion returns to the session",
+      "B": "Run the greps and reads directly, then immediately run /compact to shrink the session back down",
+      "C": "Raise the context limit for the session and read the files directly",
+      "D": "Write the file list to a temporary file with Bash and have Claude read that file instead"
+    },
+    "answer": "A",
+    "explanation": "This is the canonical use of the Task tool: broad fan-out reading where only the conclusion matters. The subagent burns its own context on the forty files and hands back a summary, leaving the main session clean for the work that follows. B admits the flood and then lossily summarizes everything, including the work the developer wanted to keep. C is not a knob the developer controls per-session, and a bigger window still degrades when packed with stale file content. D shortens the file list but the forty files still have to be read somewhere — and reading them in the main session is the thing being avoided."
+  },
+  {
+    "domain": 3,
+    "scenario": "An extraction service enables extended thinking with budget_tokens set to 10000 and leaves max_tokens at 8000. Every request fails immediately with a validation error before any tokens are generated.",
+    "question": "What is the cause and the fix?",
+    "options": {
+      "A": "budget_tokens must be less than max_tokens because thinking tokens are drawn from the same output budget; raise max_tokens above the thinking budget plus the expected visible answer",
+      "B": "budget_tokens is capped at 8192 across all models; lower it to 8000 to match the cap",
+      "C": "Extended thinking cannot be combined with structured extraction; remove the thinking block and use a tool schema instead",
+      "D": "max_tokens applies only to the visible answer and is unrelated to thinking; the real cause is that the model does not support extended thinking"
+    },
+    "answer": "A",
+    "explanation": "Thinking tokens are output tokens — the thinking budget is carved out of max_tokens, not added alongside it. So budget_tokens must be strictly less than max_tokens, and max_tokens has to leave headroom for the visible response after thinking completes; otherwise the request is rejected up front. B invents a fixed cap and would still leave budget_tokens equal to max_tokens with no room for an answer. C and D both misstate the relationship: extended thinking works fine with structured output, and max_tokens governs total output including thinking."
+  },
+  {
+    "domain": 3,
+    "scenario": "A pipeline asks Claude in prose to 'respond with only a JSON object matching this shape' and then parses the text with a regex that strips code fences. About 3% of responses fail to parse — a stray preamble, a trailing note, or a field the schema does not define. The team's current mitigation is a broader regex.",
+    "question": "What is the more reliable design?",
+    "options": {
+      "A": "Define the output shape as a tool input_schema, force its use with tool_choice, and validate the resulting tool input against the schema with a bounded retry that feeds the validation error back",
+      "B": "Add three more few-shot examples of correctly formatted JSON to the prompt",
+      "C": "Prefill the assistant turn with an opening brace and keep the regex as a fallback",
+      "D": "Lower temperature to 0 so the model produces the same formatting every time"
+    },
+    "answer": "A",
+    "explanation": "Tool schemas move structure from persuasion to enforcement: the model fills a declared input_schema, forced tool_choice guarantees it is used, and schema validation with a bounded retry loop that returns the specific error gives the model what it needs to self-correct. B and C both reduce the failure rate without removing the failure mode — examples and prefill are still prose-level nudges, and a prefilled brace does not stop a trailing note or an undeclared field. D reduces variance but a deterministic wrong format is still a wrong format; temperature is not a schema."
+  },
+  {
+    "domain": 4,
+    "scenario": "One MCP server exposes twelve tools for an internal platform, including delete_environment and rotate_credentials. Six subagents connect to it: four are read-only reporting agents, one deploys, one handles incident response. All six are configured with access to the full tool list, on the reasoning that the orchestrator's prompt tells each agent which tools are appropriate for its role.",
+    "question": "What is the architectural problem?",
+    "options": {
+      "A": "Tool access should be restricted per agent with allowedTools so the reporting agents cannot invoke destructive tools at all, rather than relying on prompt instructions as the only boundary",
+      "B": "Twelve tools in one server exceeds the practical limit; the server should be split into four servers of three tools each",
+      "C": "The destructive tools should be moved to a separate MCP server using stdio transport instead of HTTP",
+      "D": "Each agent should be given a distinct API key so destructive calls can be attributed after the fact"
+    },
+    "answer": "A",
+    "explanation": "A prompt instruction is a probabilistic constraint; least privilege has to be enforced at the tool-surface level. Configuring allowedTools per agent means a reporting agent cannot call delete_environment even if it is confused, injected into, or given a misleading task. B invents a tool-count limit that is not the issue — the issue is which agent can reach which tool. C changes transport, which does nothing about authorization; a stdio server's tools are just as callable. D provides attribution after the damage, which is auditing, not prevention."
+  },
+  {
+    "domain": 4,
+    "scenario": "A newly written MCP client opens a connection to a server and immediately issues tools/list, then calls a tool. Against one server it works; against another it fails with a protocol error, and against a third it succeeds but the client sends a request for a capability the server never advertised, which the server rejects.",
+    "question": "What is the client missing?",
+    "options": {
+      "A": "The initialize handshake, in which client and server exchange protocol version and negotiate capabilities before any other JSON-RPC request is sent",
+      "B": "An authentication step; the failing servers require OAuth before tools/list is permitted",
+      "C": "A retry with exponential backoff, since servers need time to register tools after the connection opens",
+      "D": "A switch from stdio to Streamable HTTP, because tools/list is only valid over HTTP transports"
+    },
+    "answer": "A",
+    "explanation": "MCP runs over JSON-RPC 2.0 and begins with an initialize exchange: the client sends its protocol version and capabilities, the server responds with its own, and only then is the session usable. Skipping it leaves the client guessing at capabilities — which is exactly the third symptom, requesting something never advertised. B would produce authorization errors on all servers requiring it, not a protocol error, and auth does not replace negotiation. C invents a startup race. D is false: tools/list is transport-independent."
+  },
+  {
+    "domain": 5,
+    "scenario": "A long-running agent has completed 60 tool calls. The context now holds the full raw output of every one, including forty large file reads whose contents were relevant only at the moment they were used; the conclusions drawn from them are already recorded in later assistant messages. The agent is at 80% of its window with substantial work remaining, and the team wants to avoid a full summarization pass that would blur the specific decisions made so far.",
+    "question": "What is the most appropriate technique?",
+    "options": {
+      "A": "Clear the stale tool results from the context while keeping the messages and conclusions intact, since the superseded raw outputs are the bulk of the waste",
+      "B": "Compact the entire conversation into a summary and continue from it",
+      "C": "Start a fresh session and re-run the 60 tool calls with prompt caching enabled",
+      "D": "Increase max_tokens so the agent has more room for the remaining work"
+    },
+    "answer": "A",
+    "explanation": "Context editing that clears superseded tool results targets precisely the waste — large raw outputs whose value has already been extracted — while leaving the reasoning and decisions verbatim. That satisfies the constraint against blurring specifics. B is the heavier instrument the team explicitly wants to avoid: summarization compresses the decisions too. C discards accumulated state and pays for all 60 calls again; caching reduces cost, not context occupancy. D confuses the output limit with the input window — max_tokens does not create room for conversation history."
+  },
+  {
+    "domain": 5,
+    "scenario": "A team changes an agent's system prompt to fix a class of formatting complaints. They test the new prompt on the twelve complaint cases, confirm all twelve now pass, and ship it. Two weeks later an unrelated capability — multi-step refund reasoning — is measurably worse, and nobody can say when it regressed.",
+    "question": "What evaluation practice was missing?",
+    "options": {
+      "A": "A held-out regression set covering the agent's existing capabilities, scored before and after every prompt change, so a fix to one behavior surfaces damage to another",
+      "B": "More test cases for the formatting problem, so the fix generalizes beyond the twelve reported complaints",
+      "C": "An LLM-as-judge scoring every production response, so quality changes appear in a dashboard",
+      "D": "A canary deployment routing 5% of traffic to the new prompt before full rollout"
+    },
+    "answer": "A",
+    "explanation": "Testing only the cases you are trying to fix guarantees a pass and tells you nothing about the rest of the system — prompt edits have diffuse effects, and the missing control is a stable held-out set covering existing behaviors, run as a gate on every change. B improves confidence in the fix while leaving the blind spot exactly as wide. C and D are both real practices that would have shortened detection time, but they catch the regression after it reaches users; the question is about the gate that should have caught it before shipping."
   }
 ]
